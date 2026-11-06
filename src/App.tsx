@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { getCliveToken, authClient } from './auth'
 import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search, FolderKanban, StickyNote, LayoutDashboard, X, Plus, RefreshCw } from 'lucide-react'
 
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
@@ -47,8 +48,6 @@ export default function App() {
   const [notes, setNotes] = useState<any[]>([])
   const [noteDraft, setNoteDraft] = useState('')
   const [noteProject, setNoteProject] = useState('General')
-  const [memoryPin, setMemoryPin] = useState(() => localStorage.getItem('clive-memory-pin') || '')
-  const [memoryReady, setMemoryReady] = useState(false)
   const [draft, setDraft] = useState('')
   const [speakReplies, setSpeakReplies] = useState(true)
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
@@ -161,7 +160,18 @@ Today: ${data.today.condition}, high ${data.today.high}°C and low ${data.today.
 Forecast time: ${data.current.time} (${data.timezone}).`
   }
 
-  async function memoryRequest(action: string, payload: any = {}) { if (!memoryPin) throw new Error('Set your private memory PIN in settings first.'); const response=await fetch('/api/memory',{method:'POST',headers:{'Content-Type':'application/json','x-clive-pin':memoryPin},body:JSON.stringify({action,...payload})}); const data=await response.json(); if(!response.ok) throw new Error(data.error||'Memory unavailable'); setMemoryReady(true); if(Array.isArray(data.notes)) setNotes(data.notes); return data }
+  async function memoryRequest(action: string, payload: any = {}) {
+    const token = await getCliveToken()
+    const response = await fetch('/api/memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action, ...payload })
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'Memory unavailable')
+    if (Array.isArray(data.notes)) setNotes(data.notes)
+    return data
+  }
 
   async function fetchSearch(query: string): Promise<string> {
     const response = await fetch('/api/search?q=' + encodeURIComponent(query))
@@ -281,7 +291,9 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           <h3>Test his manners detector</h3>
           <div className="test-actions"><button onClick={()=>etiquette('kind')}> <Heart size={14}/> Polite interaction</button><button onClick={()=>etiquette('rude')}>Rude interaction</button></div>
           <div className="calibration"><label htmlFor="sarcasm">Sarcasm level <strong>{profile.sarcasm}/10</strong></label><input id="sarcasm" type="range" min="0" max="10" value={profile.sarcasm} onChange={e=>setProfile(p=>({...p,sarcasm:Number(e.target.value)}))}/></div>
-          <h3>CLIVE's private memory</h3><div className="voice-panel"><div className="voice-copy"><strong>Memory PIN</strong><small>Enter the private PIN configured in Vercel. It is checked server-side.</small></div><input type="password" value={memoryPin} onChange={e=>{setMemoryPin(e.target.value);localStorage.setItem('clive-memory-pin',e.target.value)}} placeholder="Your private PIN"/><small>{memoryReady?'Memory connection tested successfully.':'Add DATABASE_URL and CLIVE_MEMORY_PIN in Vercel to enable persistent notes.'}</small></div><p className="admin-note">Chat history and personality settings remain on this device. Project notes live in CLIVE's private Neon database.</p>
+          <h3>Your CLIVE account</h3>
+          <div className="voice-panel"><div className="voice-copy"><strong>Signed in securely</strong><small>Your project memories are tied to your account and will follow you to other devices when you sign in there too.</small></div><button className="back-button" onClick={async()=>{await authClient.signOut();window.location.reload()}}>Sign out</button></div>
+          <p className="admin-note">Your chat history and personality settings remain on this device for now. Saved project notes are private to your account and sync through Neon.</p>
           <button className="reset-button" onClick={reset}><RotateCcw size={14}/> Reset test relationship</button>
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
