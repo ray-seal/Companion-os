@@ -310,8 +310,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
             <div className="voice-actions"><span>{selectedVoiceName || 'Automatic selection'}</span></div>
             {!voiceChoices.length && <small className="voice-help">No British voices have appeared yet. Your device may still be loading its speech voices.</small>}
           </div>
-          <h3>Your CLIVE account</h3>
-          <div className="voice-panel"><div className="voice-copy"><strong>Signed in securely</strong><small>Your project memories are tied to your account and will follow you to other devices when you sign in there too.</small></div><button className="back-button" onClick={async()=>{await authClient.signOut();window.location.reload()}}>Sign out</button></div>
+          <h3>Local memory</h3>
+          <div className="voice-panel"><div className="voice-copy"><strong>This device only</strong><small>Chat history, saved notes and CLIVE's local personality profile stay in this browser. Account sync is being worked on separately.</small></div></div>
           <div className="rapport-panel"><div className="rapport-top"><span>What CLIVE is getting into</span><strong>{Object.keys(personality.interests || {}).length} interests</strong></div><p>{Object.entries(personality.interests || {}).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([name,score])=>`${name} ${Math.round(score*100)}%`).join(' · ') || 'He is still getting to know you. Chat about the things you enjoy.'}</p><small>CLIVE only keeps notes when you explicitly save them.</small></div>
           <p className="admin-note">Local testing mode: chat, notes and personality stay on this device. Cloud sync and accounts are temporarily disabled.</p>
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
