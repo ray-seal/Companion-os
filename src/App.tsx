@@ -42,10 +42,31 @@ export default function App() {
   const [chatOpen, setChatOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [speakReplies, setSpeakReplies] = useState(true)
+  const [listening, setListening] = useState(false)
+  const [voiceSupported, setVoiceSupported] = useState(false)
+  const recognition = useRef<any>(null)
   const [chat, setChat] = useState<ChatMessage[]>(readChat)
   const chatEnd = useRef<HTMLDivElement>(null)
 
   useEffect(() => { localStorage.setItem('clive-profile', JSON.stringify(profile)) }, [profile])
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) return
+    setVoiceSupported(true)
+    const engine = new SpeechRecognition()
+    engine.lang = 'en-GB'
+    engine.continuous = false
+    engine.interimResults = true
+    engine.onresult = (event: any) => {
+      let transcript = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) transcript += event.results[i][0].transcript
+      setDraft(transcript.trim())
+    }
+    engine.onend = () => setListening(false)
+    engine.onerror = () => { setListening(false); setMessage("I didn't catch that. Try again, preferably without mumbling at me.") }
+    recognition.current = engine
+    return () => { try { engine.abort() } catch {} }
+  }, [])
   useEffect(() => { localStorage.setItem('clive-chat', JSON.stringify(chat.slice(-100))) }, [chat])
   useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [])
   useEffect(() => {
@@ -82,6 +103,14 @@ export default function App() {
     setProfile(p => ({ ...p, interactions: p.interactions + 1, kindness: p.kindness + (kind === 'kind' ? 1 : 0), rapport: Math.max(0, Math.min(100, p.rapport + (kind === 'kind' ? 7 : -9))) }))
     if (kind === 'kind') react('happy', "That's lovely of you. Manners cost nothing, you know.")
     else react('cheeky', "Oof. Charming. I'll remember that. Probably.")
+  }
+  function toggleListening() {
+    if (!recognition.current) { setMessage("This browser doesn't support speech recognition. You can still type to me."); return }
+    if (listening) { recognition.current.stop(); setListening(false); return }
+    setDraft('')
+    setListening(true)
+    react('listening', "Go on then. I'm listening.")
+    try { recognition.current.start() } catch { setListening(false) }
   }
   function clearChat() {
     window.speechSynthesis?.cancel()
@@ -130,8 +159,8 @@ export default function App() {
           </> : <div className="chat-panel">
             <div className="chat-heading"><span><MessageCircle size={15}/> A little chat</span><div className="chat-tools"><button onClick={clearChat} title="Clear this conversation"><RotateCcw size={14}/> Clear</button><button onClick={()=>setSpeakReplies(v=>!v)} aria-label="Toggle spoken replies">{speakReplies ? <Volume2 size={17}/> : <VolumeX size={17}/>} {speakReplies ? 'Voice on' : 'Voice off'}</button></div></div>
             <div className="chat-log">{chat.map(item=><div key={item.id} className={`chat-bubble ${item.role}`}><small>{item.role === 'you' ? 'YOU' : 'CLIVE'}</small><p>{item.text}</p>{item.role === 'clive' && <button className="replay" onClick={()=>speak(item.text)} aria-label="Read this reply aloud"><Volume2 size={14}/> Read aloud</button>}</div>)}<div ref={chatEnd}/></div>
-            <form className="chat-compose" onSubmit={e=>{e.preventDefault();sendMessage()}}><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Ask me something..." aria-label="Your message"/><button type="submit" disabled={!draft.trim()} aria-label="Send message"><Send size={17}/></button></form>
-            <div className="chat-foot"><span><Mic size={12}/> Voice input coming later</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
+            <form className="chat-compose" onSubmit={e=>{e.preventDefault();if(listening) recognition.current?.stop();sendMessage()}}><button type="button" className={listening ? 'mic-button listening' : 'mic-button'} onClick={toggleListening} disabled={!voiceSupported} aria-label={listening ? 'Stop listening' : 'Speak to CLIVE'} title={voiceSupported ? 'Speak to CLIVE' : 'Speech recognition is not supported in this browser'}><Mic size={17}/></button><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder={listening ? "I'm listening..." : "Ask me something..."} aria-label="Your message"/><button type="submit" disabled={!draft.trim()} aria-label="Send message"><Send size={17}/></button></form>
+            <div className="chat-foot"><span>{listening ? 'Listening... tap the mic to finish' : voiceSupported ? 'Tap the mic and speak' : 'Voice input unavailable in this browser'}</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
           </div>}
         </section>
       ) : (
@@ -153,7 +182,7 @@ export default function App() {
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
       )}
-      <footer><span>CLIVE v0.4 · LOCAL MEMORY</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
+      <footer><span>CLIVE v0.5 · VOICE INPUT</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
     </main>
   )
 }
