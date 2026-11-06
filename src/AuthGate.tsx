@@ -19,8 +19,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
   useEffect(() => {
     refreshSession()
-    const unsubscribe = authClient.onAuthStateChange?.(() => { refreshSession() })
-    return () => { if (typeof unsubscribe === 'function') unsubscribe() }
+    return () => {}
   }, [])
 
   async function submit(event: FormEvent) {
