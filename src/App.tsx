@@ -4,6 +4,8 @@ import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, M
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
 type Profile = { interactions: number; rapport: number; kindness: number; sarcasm: number }
 type ChatMessage = { id: number; role: 'you' | 'clive'; text: string }
+const starterChat: ChatMessage[] = [{ id: 1, role: 'clive', text: "Right then. Ask me something. I'm still growing my brain, so bear with me." }]
+function readChat(): ChatMessage[] { try { const saved = JSON.parse(localStorage.getItem('clive-chat') || 'null'); return Array.isArray(saved) && saved.length ? saved : starterChat } catch { return starterChat } }
 const initialProfile: Profile = { interactions: 0, rapport: 55, kindness: 0, sarcasm: 6 }
 const moods: Mood[] = ['happy', 'curious', 'sleepy', 'surprised', 'confused', 'cheeky']
 const lines: Record<Mood, string[]> = {
@@ -40,10 +42,12 @@ export default function App() {
   const [chatOpen, setChatOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [speakReplies, setSpeakReplies] = useState(true)
-  const [chat, setChat] = useState<ChatMessage[]>([{ id: 1, role: 'clive', text: "Right then. Ask me something. I'm still growing my brain, so bear with me." }])
+  const [chat, setChat] = useState<ChatMessage[]>(readChat)
   const chatEnd = useRef<HTMLDivElement>(null)
 
   useEffect(() => { localStorage.setItem('clive-profile', JSON.stringify(profile)) }, [profile])
+  useEffect(() => { localStorage.setItem('clive-chat', JSON.stringify(chat.slice(-100))) }, [chat])
+  useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [])
   useEffect(() => {
     const handler = (event: Event) => { event.preventDefault(); setInstallPrompt(event) }
     window.addEventListener('beforeinstallprompt', handler)
@@ -78,6 +82,10 @@ export default function App() {
     setProfile(p => ({ ...p, interactions: p.interactions + 1, kindness: p.kindness + (kind === 'kind' ? 1 : 0), rapport: Math.max(0, Math.min(100, p.rapport + (kind === 'kind' ? 7 : -9))) }))
     if (kind === 'kind') react('happy', "That's lovely of you. Manners cost nothing, you know.")
     else react('cheeky', "Oof. Charming. I'll remember that. Probably.")
+  }
+  function clearChat() {
+    window.speechSynthesis?.cancel()
+    setChat([{ id: Date.now(), role: 'clive', text: "Fresh page. New conversation. Right, what are we chatting about?" }])
   }
   function sendMessage() {
     const question = draft.trim()
@@ -120,7 +128,7 @@ export default function App() {
               <button className="chat-launch" onClick={()=>setChatOpen(true)}><MessageCircle size={13}/> Have a chat</button>
             </div>
           </> : <div className="chat-panel">
-            <div className="chat-heading"><span><MessageCircle size={15}/> A little chat</span><button onClick={()=>setSpeakReplies(v=>!v)} aria-label="Toggle spoken replies">{speakReplies ? <Volume2 size={17}/> : <VolumeX size={17}/>} {speakReplies ? 'Voice on' : 'Voice off'}</button></div>
+            <div className="chat-heading"><span><MessageCircle size={15}/> A little chat</span><div className="chat-tools"><button onClick={clearChat} title="Clear this conversation"><RotateCcw size={14}/> Clear</button><button onClick={()=>setSpeakReplies(v=>!v)} aria-label="Toggle spoken replies">{speakReplies ? <Volume2 size={17}/> : <VolumeX size={17}/>} {speakReplies ? 'Voice on' : 'Voice off'}</button></div></div>
             <div className="chat-log">{chat.map(item=><div key={item.id} className={`chat-bubble ${item.role}`}><small>{item.role === 'you' ? 'YOU' : 'CLIVE'}</small><p>{item.text}</p>{item.role === 'clive' && <button className="replay" onClick={()=>speak(item.text)} aria-label="Read this reply aloud"><Volume2 size={14}/> Read aloud</button>}</div>)}<div ref={chatEnd}/></div>
             <form className="chat-compose" onSubmit={e=>{e.preventDefault();sendMessage()}}><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="Ask me something..." aria-label="Your message"/><button type="submit" disabled={!draft.trim()} aria-label="Send message"><Send size={17}/></button></form>
             <div className="chat-foot"><span><Mic size={12}/> Voice input coming later</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
@@ -140,12 +148,12 @@ export default function App() {
           <h3>Test his manners detector</h3>
           <div className="test-actions"><button onClick={()=>etiquette('kind')}> <Heart size={14}/> Polite interaction</button><button onClick={()=>etiquette('rude')}>Rude interaction</button></div>
           <div className="calibration"><label htmlFor="sarcasm">Sarcasm level <strong>{profile.sarcasm}/10</strong></label><input id="sarcasm" type="range" min="0" max="10" value={profile.sarcasm} onChange={e=>setProfile(p=>({...p,sarcasm:Number(e.target.value)}))}/></div>
-          <p className="admin-note">This is an early personality sandbox. Chat replies are currently a small local demo, and settings save on this device. A proper AI brain and Neon memory are next.</p>
+          <p className="admin-note">Your personality settings and the last 100 chat messages are saved on this device. This is local memory for now. Neon will let CLIVE remember across devices; his proper AI brain is still on the build list.</p>
           <button className="reset-button" onClick={reset}><RotateCcw size={14}/> Reset test relationship</button>
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
       )}
-      <footer><span>CLIVE v0.3 · CHAT & SPEECH</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
+      <footer><span>CLIVE v0.4 · LOCAL MEMORY</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
     </main>
   )
 }
