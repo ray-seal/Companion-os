@@ -55,7 +55,7 @@ export default async function neonAuthProxy(req: any, res: any) {
     const cookies = upstream.headers.getSetCookie?.() || []
     if (cookies.length) res.setHeader('set-cookie', cookies)
 
-    const responseBody = Buffer.from(await upstream.arrayBuffer())
+    const responseBody = new Uint8Array(await upstream.arrayBuffer())
     return res.end(responseBody)
   } catch (error) {
     console.error('Neon Auth proxy failed:', error)
