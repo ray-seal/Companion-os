@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { getCliveToken, authClient } from './auth'
 import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search, StickyNote, X, Plus, RefreshCw } from 'lucide-react'
 
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
@@ -175,16 +174,30 @@ Forecast time: ${data.current.time} (${data.timezone}).`
   }
 
   async function memoryRequest(action: string, payload: any = {}) {
-    const token = await getCliveToken()
-    const response = await fetch('/api/memory', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ action, ...payload })
-    })
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.error || 'Memory unavailable')
-    if (Array.isArray(data.notes)) setNotes(data.notes)
-    return data
+    // Temporary local-first mode: notes and personality stay in this browser only.
+    const savedNotes = (() => {
+      try { return JSON.parse(localStorage.getItem('clive-local-notes') || '[]') } catch { return [] }
+    })()
+    if (action === 'personality_get') {
+      try {
+        const profile = JSON.parse(localStorage.getItem('clive-local-personality') || 'null')
+        return { profile: profile || starterPersonality }
+      } catch { return { profile: starterPersonality } }
+    }
+    if (action === 'save') {
+      const note = { id: Date.now(), project: String(payload.project || 'General'), note: String(payload.note || ''), created_at: new Date().toISOString() }
+      const next = [...savedNotes, note]
+      localStorage.setItem('clive-local-notes', JSON.stringify(next))
+      setNotes(next)
+      return { notes: next }
+    }
+    if (action === 'list') {
+      const project = String(payload.project || '').trim().toLowerCase()
+      const filtered = project ? savedNotes.filter((item: any) => String(item.project || '').toLowerCase() === project) : savedNotes
+      setNotes(filtered)
+      return { notes: filtered }
+    }
+    return { notes: savedNotes }
   }
 
   async function fetchSearch(query: string): Promise<string> {
@@ -300,7 +313,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           <h3>Your CLIVE account</h3>
           <div className="voice-panel"><div className="voice-copy"><strong>Signed in securely</strong><small>Your project memories are tied to your account and will follow you to other devices when you sign in there too.</small></div><button className="back-button" onClick={async()=>{await authClient.signOut();window.location.reload()}}>Sign out</button></div>
           <div className="rapport-panel"><div className="rapport-top"><span>What CLIVE is getting into</span><strong>{Object.keys(personality.interests || {}).length} interests</strong></div><p>{Object.entries(personality.interests || {}).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([name,score])=>`${name} ${Math.round(score*100)}%`).join(' · ') || 'He is still getting to know you. Chat about the things you enjoy.'}</p><small>CLIVE only keeps notes when you explicitly save them.</small></div>
-          <p className="admin-note">Your chat history remains on this device. Only notes you explicitly save sync privately to your Neon account.</p>
+          <p className="admin-note">Local testing mode: chat, notes and personality stay on this device. Cloud sync and accounts are temporarily disabled.</p>
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
       )}
