@@ -6,6 +6,8 @@ import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, M
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
 type Profile = { interactions: number; rapport: number; kindness: number; sarcasm: number }
 type ChatMessage = { id: number; role: 'you' | 'clive'; text: string }
+type Personality = { interests: Record<string, number>; traits: { curiosity: number; sarcasm: number; sentimentality: number }; favourites: { possession: string; activity: string; room: string }; habits: string[]; memories: string[] }
+const starterPersonality: Personality = { interests: {}, traits: { curiosity: 0.7, sarcasm: 0.6, sentimentality: 0.5 }, favourites: { possession: 'mug', activity: 'reading', room: 'living' }, habits: [], memories: [] }
 const starterChat: ChatMessage[] = [{ id: 1, role: 'clive', text: "Right then. Ask me something. I'm still growing my brain, so bear with me." }]
 function readChat(): ChatMessage[] { try { const saved = JSON.parse(localStorage.getItem('clive-chat') || 'null'); return Array.isArray(saved) && saved.length ? saved : starterChat } catch { return starterChat } }
 const initialProfile: Profile = { interactions: 0, rapport: 55, kindness: 0, sarcasm: 6 }
@@ -58,9 +60,11 @@ export default function App() {
   const [thinking, setThinking] = useState(false)
   const recognition = useRef<any>(null)
   const [chat, setChat] = useState<ChatMessage[]>(readChat)
+  const [personality, setPersonality] = useState<Personality>(starterPersonality)
   const chatEnd = useRef<HTMLDivElement>(null)
 
   useEffect(() => { localStorage.setItem('clive-profile', JSON.stringify(profile)) }, [profile])
+  useEffect(() => { memoryRequest('personality_get').then(data => { if (data.profile) setPersonality({ ...starterPersonality, ...data.profile, interests: data.profile.interests || {}, traits: { ...starterPersonality.traits, ...(data.profile.traits || {}) }, favourites: { ...starterPersonality.favourites, ...(data.profile.favourites || {}) }, habits: data.profile.habits || [], memories: data.profile.memories || [] }) }).catch(() => {}) }, [])
   useEffect(() => {
     if (!('speechSynthesis' in window)) return
     const loadVoices = () => setAvailableVoices(window.speechSynthesis.getVoices())
@@ -190,6 +194,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     const history = [...chat, { id: Date.now(), role: 'you' as const, text: question }]
     setChat(history)
     setDraft('')
+    memoryRequest('personality_learn', { text: question }).then(data => { if (data.profile) setPersonality(data.profile) }).catch(() => {})
     setThinking(true)
     react('listening', "Thinking... and this time there might actually be a brain involved.")
     let answer = ''
@@ -213,7 +218,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
             role: item.role === 'you' ? 'user' : 'model',
             text: item.text
           })),
-          explicitLanguage: localStorage.getItem('clive-explicit-language') === 'true'
+          explicitLanguage: localStorage.getItem('clive-explicit-language') === 'true',
+          personality
         })
       })
       const data = await response.json()
@@ -244,7 +250,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
       {!admin ? (
         <section className="stage">
           <div className="ambient ambient-one" /><div className="ambient ambient-two" />
-          <CliveFlat onSay={(line) => { setMessage(line); setLastInteraction(Date.now()) }} />
+          <CliveFlat personality={personality} onSay={(line) => { setMessage(line); setLastInteraction(Date.now()) }} />
           <button className={`bot bot-${mood}`} onClick={touchFace} aria-label="Tap CLIVE to interact">
             <div className="antenna"><i /></div>
             <div className="head"><div className="face-glass">
@@ -296,7 +302,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           <div className="calibration"><label htmlFor="sarcasm">Sarcasm level <strong>{profile.sarcasm}/10</strong></label><input id="sarcasm" type="range" min="0" max="10" value={profile.sarcasm} onChange={e=>setProfile(p=>({...p,sarcasm:Number(e.target.value)}))}/></div>
           <h3>Your CLIVE account</h3>
           <div className="voice-panel"><div className="voice-copy"><strong>Signed in securely</strong><small>Your project memories are tied to your account and will follow you to other devices when you sign in there too.</small></div><button className="back-button" onClick={async()=>{await authClient.signOut();window.location.reload()}}>Sign out</button></div>
-          <p className="admin-note">Your chat history and personality settings remain on this device for now. Saved project notes are private to your account and sync through Neon.</p>
+          <div className="rapport-panel"><div className="rapport-top"><span>What CLIVE is getting into</span><strong>{Object.keys(personality.interests || {}).length} interests</strong></div><p>{Object.entries(personality.interests || {}).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([name,score])=>`${name} ${Math.round(score*100)}%`).join(' · ') || 'He is still getting to know you. Chat about the things you enjoy.'}</p><small>His interests grow gradually from repeated conversations, not single mentions.</small></div>
+          <p className="admin-note">Your chat history remains on this device. CLIVE's developing personality and your project notes sync privately to your Neon account.</p>
           <button className="reset-button" onClick={reset}><RotateCcw size={14}/> Reset test relationship</button>
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
