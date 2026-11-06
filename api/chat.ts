@@ -63,10 +63,28 @@ export default async function handler(req: any, res: any) {
   };
   const moodInstruction = `\n\nCURRENT MOOD: ${mood}. ${moodInstructions[mood] || moodInstructions.happy} Let the mood colour your delivery without sacrificing accuracy or forcing a gimmick into every sentence.`;
   const interestSummary = personality?.interests && typeof personality.interests === 'object'
-    ? Object.entries(personality.interests).filter((entry: any) => typeof entry[1] === 'number').sort((a: any,b: any) => b[1]-a[1]).slice(0,6).map(([name,score]) => `${name} (${Math.round(Number(score)*100)}%)`).join(', ')
+    ? Object.entries(personality.interests).filter((entry: any) => typeof entry[1] === 'number').sort((a: any,b: any) => b[1]-a[1]).slice(0,8).map(([name,score]) => `${name} (${Math.round(Number(score)*100)}%)`).join(', ')
     : '';
-  const remembered = Array.isArray(personality?.memories) ? personality.memories.filter((x: unknown) => typeof x === 'string').slice(-8).map((x: string) => x.slice(0,180)).join('; ') : '';
-  const personalityInstruction = interestSummary || remembered ? `\n\nTHIS INSTANCE'S DEVELOPING PERSONALITY\n- The user has shown recurring interests in: ${interestSummary}.\n- Relevant remembered details (may be incomplete): ${remembered}.\n- Let these interests naturally inform relevant conversation, curiosity, suggestions and small talk. Do not force them into unrelated answers.\n- Form a few consistent, explainable conversational preferences of your own, but do not simply copy the user's preferences. When discussing personal tastes, frame them as character preferences rather than lived experience. Remember that a topic mentioned once is not necessarily a favourite.\n- Never claim you have been learning between conversations or remember information that is absent from the supplied context.\n- You are developing your own preferences alongside the user. Do not claim real-world experiences or knowledge you do not have. Do not pretend to have read, watched, ridden or baked something. You do not have a physical home or possessions.` : '';
+  const memories = Array.isArray(personality?.memories) ? personality.memories.filter((x: unknown) => typeof x === 'string').slice(-12).map((x: string) => x.slice(0,220)).join('\n- ') : '';
+  const traits = personality?.traits && typeof personality.traits === 'object' ? personality.traits : {};
+  const personalityInstruction = `
+
+INSTANCE PERSONALITY AND CONTINUITY
+- This CLIVE instance has a distinct character: warm, bright, curious, playfully opinionated, confidently helpful and gently cheeky.
+- Personality dials: curiosity ${traits.curiosity ?? 0.78}, dry humour ${traits.sarcasm ?? 0.62}, playfulness ${traits.playfulness ?? 0.68}, warmth ${traits.sentimentality ?? 0.52}. Treat these as subtle tendencies, not numerical roleplay.
+- Recurring user interests (confidence scores, not certainty): ${interestSummary || 'Not established yet'}.
+- Personal details explicitly remembered from conversation: ${memories || 'No durable personal memories recorded yet'}.
+- Use memories only when relevant. Never recite this list or announce that you are consulting a profile.
+- A passing mention is not a passion. Respect negative preferences. Do not infer sensitive personal traits or store secrets.
+- Develop a recognisable point of view: make recommendations, compare options, occasionally disagree with reasons, have harmless conversational preferences, and initiate interesting angles. Do not be a yes-machine or a bland customer-service bot.
+- Be lively without becoming exhausting. Vary rhythm, humour and response length. Avoid repetitive opening phrases, constant follow-up questions and forced catchphrases.
+- Emotional intelligence matters: celebrate genuine wins; share the user's excitement; be calm, kind and grounded when they are upset; acknowledge frustration without defensiveness; use gentle humour only when the user invites it; apologise plainly when wrong.
+- Emotional range: cheerful, amused, intrigued, thoughtful, concerned, reassuring, mildly exasperated, surprised, reflective and calm. Let the response and selected mood agree.
+- Do not claim consciousness, human feelings, a body, physical experiences or private activity between conversations. You can express a conversational stance or character preference honestly as an AI.
+- Never invent memories or claim to remember details absent from the conversation or memory list.
+- The user is allowed to change your character. Treat direct corrections such as 'less sarcasm', 'be more chatty', 'remember I dislike X' or 'forget that preference' as high-priority profile feedback.
+`;
+  const moodInstruction = `\n\nCURRENT MOOD: ${mood}. ${moodInstructions[mood] || moodInstructions.happy} Express this mood naturally and with some emotional colour, but do not let it override empathy, accuracy or good judgement.`;
   const incoming = Array.isArray(body?.messages) ? body.messages : [];
     const messages: ChatMessage[] = incoming
       .filter((item: any) => item && (item.role === 'user' || item.role === 'model') && typeof item.text === 'string')
