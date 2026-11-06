@@ -43,7 +43,8 @@ export default async function handler(req: any, res: any) {
       ? "\n\nLANGUAGE STYLE\n- The user has explicitly enabled adult language. You may naturally mirror their level of swearing and use occasional strong British profanity when it fits the humour. Do not force it into every reply. Never use slurs, threats or abusive language toward the user."
       : "\n\nLANGUAGE STYLE\n- Keep language family-friendly. Do not use profanity, sexual insults or explicit expressions. If the user swears, you may acknowledge their tone without repeating strong language.");
     const personality = body?.personality && typeof body.personality === 'object' ? body.personality : null;
-  const mood = typeof body?.mood === 'string' ? body.mood : 'happy';
+  const allowedMoods = ['happy', 'curious', 'sleepy', 'surprised', 'confused', 'cheeky', 'listening'];
+  const mood = allowedMoods.includes(body?.mood) ? body.mood : 'happy';
   const moodInstructions: Record<string, string> = {
     happy: 'You are in a cheerful, upbeat mood. Be warm and lively, with a little extra enthusiasm.',
     curious: 'You are feeling curious. Explore ideas, ask a thoughtful follow-up when useful, and show genuine conversational interest.',
@@ -53,7 +54,7 @@ export default async function handler(req: any, res: any) {
     cheeky: 'You are feeling cheeky. Use sharper dry British wit and playful teasing, never cruelty.',
     listening: 'You are attentive and focused. Be thoughtful, patient and engaged.'
   };
-  const moodInstruction = `\\n\\nCURRENT MOOD: ${mood}. ${moodInstructions[mood] || moodInstructions.happy} Let the mood colour your delivery without sacrificing accuracy or forcing a gimmick into every sentence.`;
+  const moodInstruction = `\n\nCURRENT MOOD: ${mood}. ${moodInstructions[mood] || moodInstructions.happy} Let the mood colour your delivery without sacrificing accuracy or forcing a gimmick into every sentence.`;
   const interestSummary = personality?.interests && typeof personality.interests === 'object'
     ? Object.entries(personality.interests).filter((entry: any) => typeof entry[1] === 'number').sort((a: any,b: any) => b[1]-a[1]).slice(0,6).map(([name,score]) => `${name} (${Math.round(Number(score)*100)}%)`).join(', ')
     : '';
