@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/clive/auth",
-      "destination": "https://ep-little-tooth-zaq7ljaz.neonauth.c-2.eu-west-2.aws.neon.tech/clive/auth"
+      "destination": "/api/clive/auth"
     },
     {
       "source": "/clive/auth/:path*",
-      "destination": "https://ep-little-tooth-zaq7ljaz.neonauth.c-2.eu-west-2.aws.neon.tech/clive/auth/:path*"
+      "destination": "/api/clive/auth/:path*"
     }
   ]
 }

@@ -94,7 +94,7 @@ INSTANCE PERSONALITY AND CONTINUITY
       return res.status(400).json({ error: 'Send a message first.' });
     }
 
-    const model = env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const model = env.GEMINI_MODEL || 'gemini-3.8-flash';
     const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
