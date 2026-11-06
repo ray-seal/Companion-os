@@ -124,3 +124,29 @@ footer{height:38px;padding:0 24px;color:#52657d;display:flex;justify-content:spa
 .flat-options{padding:6px 4px 0;letter-spacing:0}.flat-options label{display:flex;gap:7px;align-items:center}.flat-options input{accent-color:#58dce9}
 @keyframes flatBob{50%{transform:translateY(-4px)}}@keyframes flatSleep{50%{transform:translateY(4px) rotate(3deg)}}@keyframes flatWalk{to{transform:translateY(-5px) rotate(5deg)}}
 @media(max-width:520px){.clive-flat{padding:8px}.flat-room{height:210px}.flat-sofa{width:125px}.flat-kitchen{width:125px}.flat-window{width:88px;height:75px}.flat-shelf{width:100px}.flat-thought{font-size:7px}}
+
+/* Three connected rooms: swipe or use the room controls */
+.flat-track{display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scroll-behavior:smooth;border-radius:12px;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#4b8791 #122334}
+.flat-room{flex:0 0 100%;width:100%;scroll-snap-align:start;height:245px;position:relative;overflow:hidden}
+.flat-room.bedroom{background:linear-gradient(#182840 0 68%,#55475a 68% 100%)}
+.flat-room.living{background:linear-gradient(#243b53 0 68%,#785b49 68% 100%)}
+.flat-room.kitchen{background:linear-gradient(#314653 0 68%,#86654b 68% 100%)}
+.flat-room .flat-character{position:absolute;left:48%;bottom:12px;z-index:3}
+.flat-room.bedroom .flat-character{left:35%}
+.flat-room.kitchen .flat-character{left:67%}
+.room-name{position:absolute;left:12px;top:12px;color:#d6e7e8aa;font:8px 'DM Mono',monospace;letter-spacing:.16em}
+.flat-room .flat-window{right:9%;top:25px}
+.flat-room .flat-sofa{left:10%;bottom:12px}
+.flat-room .flat-bed{display:block;left:12%;bottom:12px}
+.flat-room.living .flat-bed,.flat-room.kitchen .flat-bed{display:none}
+.flat-room.bedroom .flat-sofa,.flat-room.kitchen .flat-sofa{display:none}
+.flat-room.living .flat-kitchen,.flat-room.bedroom .flat-kitchen{display:none}
+.flat-room .flat-kitchen{right:5%;bottom:12px}
+.flat-room .flat-shelf{position:absolute;left:8%;top:32px;width:150px;height:9px;background:#9a7557;display:flex;justify-content:space-around;color:#e8d4ac;font-size:20px}
+.flat-room .flat-lamp{position:absolute;left:42%;top:23px;color:#ffe3a2;font-size:33px}
+.favourite-mug{position:absolute;right:27%;bottom:79px;z-index:4;border:1px solid #e8d3ae55;border-radius:10px;background:#3a2d29;color:#ffe6c4;font-size:27px;padding:3px 7px;cursor:pointer;filter:drop-shadow(0 3px 3px #0008)}
+.favourite-mug small{display:block;font:7px 'DM Mono',monospace;white-space:nowrap;color:#ffe6c4}
+.mug-empty{position:absolute;right:23%;bottom:89px;color:#f4d8ad;font:9px 'DM Mono',monospace}
+.flat-scroll-hint{text-align:center;color:#7895aa;font-size:9px;padding:7px 0 2px}
+.flat-controls button.active{border-color:#58dce9;color:#a9f2f2;background:#123b46}
+@media(max-width:520px){.flat-room{height:210px}.flat-room .flat-sofa{width:125px}.flat-room .flat-kitchen{width:125px}.flat-room .flat-window{width:88px;height:75px}.flat-room .flat-shelf{width:100px}.favourite-mug{right:25%;bottom:75px}}
