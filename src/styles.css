@@ -58,3 +58,7 @@ footer{height:38px;padding:0 24px;color:#52657d;display:flex;justify-content:spa
 @media(max-width:520px){.chat-panel{max-height:39vh}.quick-etiquette{flex-wrap:wrap;justify-content:center}}
 
 .chat-tools{display:flex;align-items:center;gap:12px}.chat-tools button{display:flex;align-items:center;gap:5px}
+
+.chat-compose .mic-button{width:42px;flex:0 0 42px;border:1px solid #ffffff20;border-radius:11px;background:#ffffff0b;color:#86c8d3;display:grid;place-items:center;cursor:pointer}
+.chat-compose .mic-button:disabled{opacity:.35;cursor:not-allowed}.chat-compose .mic-button.listening{background:#9b3548;color:#fff;box-shadow:0 0 0 4px #e65b6c22;animation:micPulse 1.2s infinite}
+@keyframes micPulse{50%{box-shadow:0 0 0 8px #e65b6c08}}
