@@ -18,7 +18,7 @@ export default async function handler(req: any, res: any) {
       })
     })
     if (!upstream.ok) { console.error('Voice provider status', upstream.status); return res.status(502).json({ error: 'Premium voice temporarily unavailable.' }) }
-    const bytes = Buffer.from(await upstream.arrayBuffer())
+    const bytes = new Uint8Array(await upstream.arrayBuffer())
     res.setHeader('Content-Type', 'audio/mpeg')
     res.setHeader('Cache-Control', 'no-store')
     return res.status(200).send(bytes)
