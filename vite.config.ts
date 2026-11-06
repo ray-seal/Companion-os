@@ -17,7 +17,7 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'landscape',
         start_url: '/',
-        icons: []
+        icons: [{ src: '/clive.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }]
       },
       workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] }
     })
