@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic } from 'lucide-react'
+import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search } from 'lucide-react'
 
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
 type Profile = { interactions: number; rapport: number; kindness: number; sarcasm: number }
@@ -118,6 +118,36 @@ export default function App() {
     window.speechSynthesis?.cancel()
     setChat([{ id: Date.now(), role: 'clive', text: "Fresh page. New conversation. Right, what are we chatting about?" }])
   }
+  async function fetchWeather(): Promise<string> {
+    if (!navigator.geolocation) return "I can't access location from this browser. Tell me your town and we'll add a manual location setting."
+    const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 })
+    )
+    const response = await fetch('/api/weather', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude: position.coords.latitude, longitude: position.coords.longitude })
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'Weather service unavailable')
+    return `Here's the latest from your current location, according to Open-Meteo:
+
+Right now: ${data.current.condition}, ${data.current.temperature}°C (feels like ${data.current.feelsLike}°C).
+Humidity: ${data.current.humidity}%. Wind: ${data.current.wind} km/h.
+Today: ${data.today.condition}, high ${data.today.high}°C and low ${data.today.low}°C. Chance of rain: ${data.today.rainChance ?? 'not available'}%.
+
+Forecast time: ${data.current.time} (${data.timezone}).`
+  }
+
+  async function fetchSearch(query: string): Promise<string> {
+    const response = await fetch('/api/search?q=' + encodeURIComponent(query))
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || 'Search unavailable')
+    if (!data.results?.length) return `I couldn't find a useful Wikipedia result for "${query}". Try a different phrase.`
+    return `I found these quick-reference results for "${query}" on Wikipedia:
+
+` + data.results.map((item: any, index: number) => `${index + 1}. ${item.title}\n${item.snippet}\n${item.url}`).join('\n\n') + '\n\nThis is a Wikipedia reference search, not a full web search engine.'
+  }
+
   async function sendMessage() {
     const question = draft.trim()
     if (!question || thinking) return
@@ -128,6 +158,13 @@ export default function App() {
     react('listening', "Thinking... and this time there might actually be a brain involved.")
     let answer = ''
     try {
+      const q = question.toLowerCase()
+      if (/\b(weather|forecast|raining|temperature outside)\b/.test(q)) {
+        answer = await fetchWeather()
+      } else if (/^(search|look up|find online|find out about)\b/i.test(question)) {
+        const query = question.replace(/^(search for|search|look up|find online|find out about)\s*/i, '').trim()
+        answer = await fetchSearch(query || question)
+      } else {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -140,8 +177,9 @@ export default function App() {
       })
       const data = await response.json()
       answer = response.ok && typeof data.reply === 'string' ? data.reply : localReply(question)
-    } catch {
-      answer = localReply(question)
+      }
+    } catch (error) {
+      answer = error instanceof Error ? error.message : localReply(question)
     }
     setChat(items => [...items, { id: Date.now() + 1, role: 'clive', text: answer }])
     setThinking(false)
@@ -183,7 +221,7 @@ export default function App() {
             <div className="chat-heading"><span><MessageCircle size={15}/> A little chat</span><div className="chat-tools"><button onClick={clearChat} title="Clear this conversation"><RotateCcw size={14}/> Clear</button><button onClick={()=>setSpeakReplies(v=>!v)} aria-label="Toggle spoken replies">{speakReplies ? <Volume2 size={17}/> : <VolumeX size={17}/>} {speakReplies ? 'Voice on' : 'Voice off'}</button></div></div>
             <div className="chat-log">{chat.map(item=><div key={item.id} className={`chat-bubble ${item.role}`}><small>{item.role === 'you' ? 'YOU' : 'CLIVE'}</small><p>{item.text}</p>{item.role === 'clive' && <button className="replay" onClick={()=>speak(item.text)} aria-label="Read this reply aloud"><Volume2 size={14}/> Read aloud</button>}</div>)}{thinking && <div className="chat-bubble clive thinking-bubble"><small>CLIVE</small><p>Thinking<span className="thinking-dots">...</span></p></div>}<div ref={chatEnd}/></div>
             <form className="chat-compose" onSubmit={e=>{e.preventDefault();if(listening) recognition.current?.stop();sendMessage()}}><button type="button" className={listening ? 'mic-button listening' : 'mic-button'} onClick={toggleListening} disabled={!voiceSupported} aria-label={listening ? 'Stop listening' : 'Speak to CLIVE'} title={voiceSupported ? 'Speak to CLIVE' : 'Speech recognition is not supported in this browser'}><Mic size={17}/></button><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder={listening ? "I'm listening..." : "Ask me something..."} aria-label="Your message"/><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message"><Send size={17}/></button></form>
-            <div className="chat-foot"><span>{listening ? 'Listening... tap the mic to finish' : voiceSupported ? 'Tap the mic and speak' : 'Voice input unavailable in this browser'}</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
+            <div className="chat-foot"><span>{listening ? 'Listening... tap the mic to finish' : voiceSupported ? 'Mic to speak · Ask weather or 'search for…'' : 'Voice input unavailable in this browser'}</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
           </div>}
         </section>
       ) : (
@@ -205,7 +243,7 @@ export default function App() {
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
       )}
-      <footer><span>CLIVE v0.6 · AI-READY</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
+      <footer><span>CLIVE v0.7 · WEATHER & SEARCH</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
     </main>
   )
 }
