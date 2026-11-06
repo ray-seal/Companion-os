@@ -231,20 +231,36 @@ Forecast time: ${data.current.time} (${data.timezone}).`
         const query = question.replace(/^(search for|search|look up|find online|find out about)\s*/i, '').trim()
         answer = await fetchSearch(query || question)
       } else {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: history.slice(-12).map(item => ({
-            role: item.role === 'you' ? 'user' : 'model',
-            text: item.text
-          })),
-          explicitLanguage: localStorage.getItem('clive-explicit-language') === 'true',
-          personality,
-          mood
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), 25000)
+      let response: Response
+      try {
+        response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            messages: history.slice(-12).map(item => ({
+              role: item.role === 'you' ? 'user' : 'model',
+              text: item.text
+            })),
+            explicitLanguage: localStorage.getItem('clive-explicit-language') === 'true',
+            personality,
+            mood
+          })
         })
-      })
-      const data = await response.json()
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error("That's taking longer than it should. My brain connection has timed out. Try sending that again.")
+        }
+        throw new Error("I can't reach my brain connection at the moment. Check your connection and give me another go.")
+      } finally {
+        window.clearTimeout(timeoutId)
+      }
+      let data: any
+      try { data = await response.json() } catch {
+        throw new Error("I got a garbled reply from the brain connection. Try me again.")
+      }
       if (!response.ok) throw new Error(data.error || 'My cloud brain is having a wobble. Try again in a moment.')
       answer = typeof data.reply === 'string' ? data.reply : localReply(question)
       }
