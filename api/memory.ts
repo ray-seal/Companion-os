@@ -22,23 +22,42 @@ export default async function handler(req:any,res:any) {
     const sql=neon(env.DATABASE_URL)
     const body=typeof req.body==='string'?JSON.parse(req.body):req.body
     const action=String(body?.action||'')
+    const defaults={version:2,interests:{},traits:{curiosity:0.78,sarcasm:0.62,sentimentality:0.52,playfulness:0.68,confidence:0.62},preferences:{conversationStyle:'warm, witty and curious',humour:'dry British humour',energy:'adaptable'},habits:[],memories:[],recentTopics:[]}
     if(action==='personality_get') {
       const rows=await sql`SELECT profile FROM clive_personality_profiles WHERE user_id=${userId} LIMIT 1`
-      const defaults={version:1,interests:{},traits:{curiosity:0.7,sarcasm:0.6,sentimentality:0.5},favourites:{possession:'mug',activity:'reading',room:'living'},habits:[],memories:[]}
       if(!rows.length){const created=await sql`INSERT INTO clive_personality_profiles (user_id,profile) VALUES (${userId},${JSON.stringify(defaults)}::jsonb) ON CONFLICT (user_id) DO NOTHING RETURNING profile`;return res.status(200).json({profile:created[0]?.profile||defaults})}
-      return res.status(200).json({profile:{...defaults,...rows[0].profile,interests:rows[0].profile.interests||{},traits:{...defaults.traits,...(rows[0].profile.traits||{})},favourites:{...defaults.favourites,...(rows[0].profile.favourites||{})}}})
+      const old=rows[0].profile||{}
+      const profile={...defaults,...old,version:2,interests:old.interests||{},traits:{...defaults.traits,...(old.traits||{})},preferences:{...defaults.preferences,...(old.preferences||{})},habits:Array.isArray(old.habits)?old.habits:[],memories:Array.isArray(old.memories)?old.memories:[],recentTopics:Array.isArray(old.recentTopics)?old.recentTopics:[]}
+      return res.status(200).json({profile})
     }
     if(action==='personality_learn') {
-      const text=String(body.text||'').toLowerCase().slice(0,3000)
-      const categories:Record<string,string[]>={books:['book','novel','reading','author','chapter','kindle','fiction','fantasy'],motorcycles:['motorbike','motorcycle','bike','biker','riding','triumph','yamaha','honda','ducati'],baking:['bake','baking','cake','bread','cookies','biscuits','sourdough','pastry'],cooking:['cook','cooking','recipe','dinner','slow cooker'], 'crime dramas':['csi','crime drama','detective','murder mystery','true crime','forensic','police drama'],gaming:['game','gaming','playstation','xbox','nintendo','roblox','steam'],technology:['coding','code','programming','raspberry pi','computer','software','app','developer'],gardening:['garden','gardening','plants','flowers','allotment'],music:['music','song','singing','guitar','band','album']}
-      const matches=Object.entries(categories).filter(([_,words])=>words.some(word=>text.includes(word))).map(([name])=>name)
+      const raw=String(body.text||'').trim().slice(0,3000)
+      if(!raw) return res.status(400).json({error:'Nothing to learn from.'})
+      const text=raw.toLowerCase()
+      const categories:Record<string,string[]>={books:['book','novel','reading','author','chapter','kindle','fiction','fantasy','harry potter'],motorcycles:['motorbike','motorcycle','biker','riding','triumph','yamaha','honda','ducati'],baking:['bake','baking','cake','bread','cookies','biscuits','sourdough','pastry'],cooking:['cook','cooking','recipe','dinner','slow cooker'], 'crime & mysteries':['csi','crime drama','detective','murder mystery','true crime','forensic','police drama'],gaming:['game','gaming','playstation','xbox','nintendo','roblox','steam'],technology:['coding','programming','raspberry pi','computer','software','app','developer'],gardening:['garden','gardening','plants','flowers','allotment'],music:['music','song','singing','guitar','band','album']}
       const rows=await sql`SELECT profile FROM clive_personality_profiles WHERE user_id=${userId} LIMIT 1`
-      const defaults={version:1,interests:{},traits:{curiosity:0.7,sarcasm:0.6,sentimentality:0.5},favourites:{possession:'mug',activity:'reading',room:'living'},habits:[],memories:[]}
       const profile=rows[0]?.profile||defaults
-      for(const name of matches){profile.interests=profile.interests||{};profile.interests[name]=Math.min(1,Number(profile.interests[name]||0)+0.08)}
-      if(matches.length){if(profile.interests.books>=0.45){profile.favourites.activity='reading';profile.favourites.possession='books'}if(profile.interests.motorcycles>=0.45){profile.favourites.activity='hobby';profile.favourites.possession='helmet'}if(profile.interests['crime dramas']>=0.45){profile.favourites.activity='watching';profile.favourites.possession='television'}if(profile.interests.baking>=0.45){profile.favourites.activity='baking';profile.favourites.possession='cookbook'}}
+      profile.interests=profile.interests||{}
+      profile.memories=Array.isArray(profile.memories)?profile.memories:[]
+      profile.recentTopics=Array.isArray(profile.recentTopics)?profile.recentTopics:[]
+      const negative=/\b(don't like|do not like|hate|can't stand|dislike|not interested in)\b/.test(text)
+      const positive=/\b(love|really enjoy|enjoy|adore|favourite|favorite|obsessed|passionate about|into)\b/.test(text)
+      const matches=Object.entries(categories).filter(([_,words])=>words.some(word=>text.includes(word))).map(([name])=>name)
+      for(const name of matches){
+        const old=Number(profile.interests[name]||0)
+        const boost=negative?-0.12:positive?0.16:0.045
+        profile.interests[name]=Math.max(-1,Math.min(1,old+boost))
+      }
+      profile.recentTopics=[...matches,...profile.recentTopics].filter((v:string,i:number,a:string[])=>a.indexOf(v)===i).slice(0,8)
+      const personal=/\b(my favourite|my favorite|i love|i hate|i prefer|i work|my wife|my husband|my son|my daughter|my dog|i ride|i collect|i am|i'm)\b/.test(text)
+      if(personal && raw.length>18 && !profile.memories.some((m:string)=>m.toLowerCase()===raw.toLowerCase())){
+        profile.memories=[...profile.memories,raw].slice(-30)
+      }
+      profile.traits={...defaults.traits,...(profile.traits||{})}
+      if(/\b(joke|banter|funny|hilarious|🤣|😂)\b/.test(text)) profile.traits.playfulness=Math.min(1,Number(profile.traits.playfulness||0.68)+0.015)
+      if(/\b(thank you|please|cheers|kind|lovely)\b/.test(text)) profile.traits.sentimentality=Math.min(1,Number(profile.traits.sentimentality||0.52)+0.01)
       await sql`INSERT INTO clive_personality_profiles (user_id,profile,updated_at) VALUES (${userId},${JSON.stringify(profile)}::jsonb,NOW()) ON CONFLICT (user_id) DO UPDATE SET profile=EXCLUDED.profile,updated_at=NOW()`
-      return res.status(200).json({profile,learned:matches})
+      return res.status(200).json({profile,learned:matches,remembered:personal})
     }
     if(action==='save') {
       const project=String(body.project||'General').trim().slice(0,80)||'General'
