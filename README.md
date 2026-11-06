@@ -1,6 +1,6 @@
 # CompanionOS · CLIVE
 
-**C.L.I.V.E. — Computer Living In Virtual Environment**
+**C.L.I.V.E. — Companion Living In a Virtual Environment**
 
 A cheeky, expressive digital companion designed as a lightweight, installable PWA. The first target is an 800×480 touchscreen on a Raspberry Pi Zero W, with development and testing on desktop and mobile browsers first.
 
@@ -28,7 +28,8 @@ npm run preview
 
 - **Frontend:** React + TypeScript + Vite PWA
 - **Character:** CSS/vector-style components and animation state machine
-- **Backend:** Vercel serverless API
+- **Backend:** Vercel serverless API (`/api/chat`)
+- **AI:** Gemini API, called server-side; the UI falls back to local demo replies until a key is configured
 - **Database:** Neon PostgreSQL, accessed only through the API
 - **Memory:** Local-first cache plus explicit, user-controlled long-term memories
 - **Personality:** Mood, rapport, etiquette signals and adjustable traits
@@ -50,3 +51,17 @@ The Raspberry Pi is a display client, not the source of truth. It must never con
 CLIVE's name: **Computer Living In Virtual Environment**.
 
 Repository: `ray-seal/Companion-os`.
+
+
+## Connecting CLIVE's AI brain
+
+The chat endpoint is ready at `/api/chat`. It keeps the provider key on the server and never sends it to the browser.
+
+1. Create an API key in [Google AI Studio](https://aistudio.google.com/).
+2. In Vercel, open the CompanionOS project and go to **Settings → Environment Variables**.
+3. Add `GEMINI_API_KEY` with the key as its value. Optionally add `GEMINI_MODEL` (defaults to `gemini-2.5-flash`).
+4. Apply it to the Production environment and redeploy.
+
+The endpoint accepts only POST requests, limits conversation context to the latest 12 messages, and caps each message at 3,000 characters. Keep API keys out of GitHub and frontend code. The free provider tier has its own quotas and terms; check those before use.
+
+For local development, copy `.env.example` to `.env.local` and add your key there. Do not commit `.env.local`.
