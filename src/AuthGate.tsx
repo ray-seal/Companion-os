@@ -17,9 +17,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     try {
       const result = await authClient.getSession()
       if (result.error) throw result.error
-      const nextUser = result.data?.user ?? null
-      setSession(nextUser)
-      return Boolean(nextUser)
+      const nextSession = result.data ?? null
+      setSession(nextSession)
+      return Boolean(nextSession?.userId)
     } catch (error) {
       setSession(null)
       throw error
@@ -80,7 +80,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (loading) return <main className="auth-shell"><div className="auth-card"><div className="brand"><span className="brand-dot" /> COMPANION<span className="muted">OS</span></div><p>Checking who's at the door...</p></div></main>
-  if (session) return <>{children}</>
+  if (session?.userId) return <>{children}</>
   return <main className="auth-shell"><section className="auth-card">
     <div className="brand"><span className="brand-dot" /> COMPANION<span className="muted">OS</span></div>
     <div className="eyebrow">CLIVE'S PRIVATE SPACE</div>
