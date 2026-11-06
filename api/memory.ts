@@ -36,7 +36,7 @@ export default async function handler(req:any,res:any) {
       const defaults={version:1,interests:{},traits:{curiosity:0.7,sarcasm:0.6,sentimentality:0.5},favourites:{possession:'mug',activity:'reading',room:'living'},habits:[],memories:[]}
       const profile=rows[0]?.profile||defaults
       for(const name of matches){profile.interests=profile.interests||{};profile.interests[name]=Math.min(1,Number(profile.interests[name]||0)+0.08)}
-      if(matches.length){if(profile.interests.books>=0.45)profile.favourites.activity='reading';if(profile.interests.motorcycles>=0.45)profile.favourites.activity='hobby';if(profile.interests['crime dramas']>=0.45)profile.favourites.activity='watching';if(profile.interests.baking>=0.45)profile.favourites.activity='baking'}
+      if(matches.length){if(profile.interests.books>=0.45){profile.favourites.activity='reading';profile.favourites.possession='books'}if(profile.interests.motorcycles>=0.45){profile.favourites.activity='hobby';profile.favourites.possession='helmet'}if(profile.interests['crime dramas']>=0.45){profile.favourites.activity='watching';profile.favourites.possession='television'}if(profile.interests.baking>=0.45){profile.favourites.activity='baking';profile.favourites.possession='cookbook'}}
       await sql`INSERT INTO clive_personality_profiles (user_id,profile,updated_at) VALUES (${userId},${JSON.stringify(profile)}::jsonb,NOW()) ON CONFLICT (user_id) DO UPDATE SET profile=EXCLUDED.profile,updated_at=NOW()`
       return res.status(200).json({profile,learned:matches})
     }
