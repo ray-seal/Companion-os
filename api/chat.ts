@@ -94,59 +94,78 @@ INSTANCE PERSONALITY AND CONTINUITY
       return res.status(400).json({ error: 'Send a message first.' });
     }
 
-    const model = env.GEMINI_MODEL || 'gemini-3.8-flash';
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const primaryModel = env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const backupModel = env.GEMINI_BACKUP_MODEL || 'gemini-3.5-flash-lite';
+    const models = [primaryModel, backupModel].filter((model, index, list) => list.indexOf(model) === index);
     const requestBody = JSON.stringify({
       systemInstruction: { parts: [{ text: systemInstruction + personalityInstruction + moodInstruction }] },
       contents: messages,
       generationConfig: { temperature: 0.85, maxOutputTokens: 700 }
     });
 
-    // Gemini can return transient 503 capacity errors. Retry once with a short
-    // backoff, but keep a strict per-attempt timeout so the browser never waits
-    // anywhere near Vercel's five-minute function limit.
     let upstream: Response | null = null;
     let data: any = null;
-    for (let attempt = 0; attempt < 2; attempt++) {
-      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 700));
-      try {
-        upstream = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-          body: requestBody,
-          signal: AbortSignal.timeout(9000)
-        });
-      } catch (error) {
-        console.error('Gemini network/timeout error:', error);
-        if (attempt === 1) {
-          return res.status(504).json({ error: "I've lost the connection to my AI brain. It isn't responding just now. Give me another try in a moment." });
+    let lastFailure: 'timeout' | 'unavailable' | 'rate-limit' | null = null;
+
+    // Give the primary model one quick retry, then fail over to Flash-Lite.
+    // The combined budget stays below the browser's 25-second request timeout.
+    for (let modelIndex = 0; modelIndex < models.length; modelIndex++) {
+      const model = models[modelIndex];
+      const attempts = modelIndex === 0 ? 2 : 1;
+      let modelSucceeded = false;
+
+      for (let attempt = 0; attempt < attempts; attempt++) {
+        if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+            body: requestBody,
+            signal: AbortSignal.timeout(6500)
+          });
+          upstream = response;
+          try { data = await response.json(); } catch { data = null; }
+
+          if (response.ok) {
+            modelSucceeded = true;
+            console.info(`CLIVE chat answered using ${model}`);
+            break;
+          }
+
+          const status = response.status;
+          const message = data?.error?.message || 'Unknown provider error';
+          console.error(`Gemini model ${model} failed:`, status, message);
+          const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+          if (!transient) {
+            return res.status(status === 400 ? 400 : 502).json({
+              error: "My AI connection rejected that request. Give me another go in a moment."
+            });
+          }
+          lastFailure = status === 429 ? 'rate-limit' : 'unavailable';
+          if (attempt + 1 < attempts) continue;
+          break;
+        } catch (error) {
+          console.error(`Gemini model ${model} network/timeout error:`, error);
+          lastFailure = 'timeout';
+          if (attempt + 1 < attempts) continue;
+          break;
         }
-        continue;
       }
 
-      try { data = await upstream.json(); }
-      catch { data = null; }
-
-      if (upstream.ok) break;
-
-      const status = upstream.status;
-      const message = data?.error?.message || 'Unknown provider error';
-      console.error('Gemini request failed:', status, message);
-
-      const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
-      if (transient && attempt === 0) continue;
-
-      if (status === 503) {
-        return res.status(503).json({ error: "Google's AI service is busy at the moment. I've tried again, but it's still full. Give me a minute and try once more." });
+      if (modelSucceeded) break;
+      if (modelIndex + 1 < models.length) {
+        console.warn(`CLIVE switching from ${model} to backup model ${models[modelIndex + 1]}`);
       }
-      if (status === 429) {
-        return res.status(429).json({ error: "The AI service has temporarily limited requests. Give it a moment, then try again." });
-      }
-      return res.status(502).json({ error: "My AI connection returned an unexpected error. Try me again in a moment." });
     }
 
     if (!upstream?.ok) {
-      return res.status(503).json({ error: "Google's AI service is temporarily unavailable. Give me a moment and try again." });
+      if (lastFailure === 'timeout') {
+        return res.status(504).json({ error: "Both my usual brain and backup are taking too long to respond. Give me another try in a moment." });
+      }
+      if (lastFailure === 'rate-limit') {
+        return res.status(429).json({ error: "Both AI routes are temporarily rate-limited. Give me a moment, then try again." });
+      }
+      return res.status(503).json({ error: "My main AI service is busy and my backup couldn't get through either. Try me again shortly." });
     }
 
     const reply = data?.candidates?.[0]?.content?.parts
