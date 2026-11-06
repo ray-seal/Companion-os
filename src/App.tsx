@@ -25,6 +25,16 @@ function readProfile(): Profile {
   try { return { ...initialProfile, ...JSON.parse(localStorage.getItem('clive-profile') || '{}') } }
   catch { return initialProfile }
 }
+function conversationalMood(question: string, answer: string): Mood {
+  const text = (question + ' ' + answer).toLowerCase()
+  if (/\b(sorry|upset|worried|anxious|rough day|struggling|painful|sad|scared)\b/.test(text)) return 'curious'
+  if (/\b(wow|brilliant|fantastic|amazing|excited|can't wait|excellent)\b/.test(text)) return 'surprised'
+  if (/\b(why|how does|what if|curious|wonder|explain|tell me about)\b/.test(question.toLowerCase())) return 'curious'
+  if (/\b(bloody|daft|ridiculous|nonsense|taking the piss|cheeky)\b/.test(text)) return 'cheeky'
+  if (/\b(confused|don't understand|unclear|what do you mean)\b/.test(text)) return 'confused'
+  if (/\b(tired|sleepy|bedtime|going to bed)\b/.test(text)) return 'sleepy'
+  return 'happy'
+}
 function localReply(question: string): string {
   const q = question.toLowerCase()
   if (/\b(hello|hi|hiya|hey)\b/.test(q)) return "Hello! Lovely to have a natter. What would you like to know?"
@@ -111,8 +121,14 @@ export default function App() {
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
     utterance.lang = 'en-GB'
-    utterance.rate = 0.96
-    utterance.pitch = 0.92
+    const voiceStyle: Record<Mood, { rate: number; pitch: number }> = {
+      happy: { rate: 1.02, pitch: 1.02 }, curious: { rate: 0.98, pitch: 1.08 },
+      sleepy: { rate: 0.86, pitch: 0.88 }, surprised: { rate: 1.08, pitch: 1.12 },
+      confused: { rate: 0.93, pitch: 0.98 }, cheeky: { rate: 1.01, pitch: 0.94 },
+      listening: { rate: 0.96, pitch: 0.96 }
+    }
+    utterance.rate = voiceStyle[mood].rate
+    utterance.pitch = voiceStyle[mood].pitch
     const voices = window.speechSynthesis.getVoices()
     const preferred = voices.find(v => v.voiceURI === selectedVoice)
     const britishVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en-gb'))
@@ -219,18 +235,21 @@ Forecast time: ${data.current.time} (${data.timezone}).`
             text: item.text
           })),
           explicitLanguage: localStorage.getItem('clive-explicit-language') === 'true',
-          personality
+          personality,
+          mood
         })
       })
       const data = await response.json()
-      answer = response.ok && typeof data.reply === 'string' ? data.reply : localReply(question)
+      if (!response.ok) throw new Error(data.error || 'My cloud brain is having a wobble. Try again in a moment.')
+      answer = typeof data.reply === 'string' ? data.reply : localReply(question)
       }
     } catch (error) {
       answer = error instanceof Error ? error.message : localReply(question)
     }
     setChat(items => [...items, { id: Date.now() + 1, role: 'clive', text: answer }])
     setThinking(false)
-    react('happy', "Right, that's my contribution. What next?")
+    const nextMood = conversationalMood(question, answer)
+    react(nextMood, nextMood === 'happy' ? "Right, that's my contribution. What next?" : undefined)
     if (speakReplies) window.setTimeout(() => speak(answer), 180)
   }
   const reset = () => { setProfile(initialProfile); setMood('happy'); setMessage("Fresh start. I've conveniently forgotten your previous nonsense."); setLastInteraction(Date.now()) }
