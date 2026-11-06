@@ -10,7 +10,6 @@ const starterPersonality: Personality = { interests: {}, traits: { curiosity: 0.
 const starterChat: ChatMessage[] = [{ id: 1, role: 'clive', text: "Right then, I'm CLIVE. A little curious, occasionally cheeky, and always up for a proper conversation. What's happening?" }]
 function readChat(): ChatMessage[] { try { const saved = JSON.parse(localStorage.getItem('clive-chat') || 'null'); return Array.isArray(saved) && saved.length ? saved : starterChat } catch { return starterChat } }
 const initialProfile: Profile = { interactions: 0, rapport: 55, kindness: 0, sarcasm: 6 }
-const moods: Mood[] = ['happy', 'curious', 'sleepy', 'surprised', 'confused', 'cheeky']
 const lines: Record<Mood, string[]> = {
   happy: ["Well hello there. Lovely to see you.", "Good to see you! What are we up to?", "You're looking positively productive. Shall we?"],
   curious: ["Hmm. What have you got for me?", "Go on then, I'm intrigued.", "Something interesting is afoot. I can feel it."],
@@ -143,11 +142,6 @@ export default function App() {
     setLastInteraction(Date.now()); setProfile(p => ({ ...p, interactions: p.interactions + 1 }))
   }
   function touchFace() { setDashboard(true); setPanel('home'); react('curious', 'Control centre open. What are we poking at?') }
-  function etiquette(kind: 'kind' | 'rude') {
-    setProfile(p => ({ ...p, interactions: p.interactions + 1, kindness: p.kindness + (kind === 'kind' ? 1 : 0), rapport: Math.max(0, Math.min(100, p.rapport + (kind === 'kind' ? 7 : -9))) }))
-    if (kind === 'kind') react('happy', "That's lovely of you. Manners cost nothing, you know.")
-    else react('cheeky', "Oof. Charming. I'll remember that. Probably.")
-  }
   function toggleListening() {
     if (!recognition.current) { setMessage("This browser doesn't support speech recognition. You can still type to me."); return }
     if (listening) { recognition.current.stop(); setListening(false); return }
@@ -250,11 +244,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     react(nextMood, nextMood === 'happy' ? "Right, that's my contribution. What next?" : undefined)
     if (speakReplies) window.setTimeout(() => speak(answer), 180)
   }
-  const reset = () => { setProfile(initialProfile); setMood('happy'); setMessage("Fresh start. I've conveniently forgotten your previous nonsense."); setLastInteraction(Date.now()) }
   const voiceChoices = availableVoices.filter(v => v.lang.toLowerCase().startsWith('en-gb'))
   const selectedVoiceName = voiceChoices.find(v => v.voiceURI === selectedVoice)?.name
-  function previewVoice() { speak("Right then. I'm CLIVE. Put the kettle on, tell me what's happening, and we'll sort it out. Probably.") }
-  const rapportLabel = profile.rapport >= 75 ? 'Chummy' : profile.rapport >= 45 ? 'Getting acquainted' : profile.rapport >= 20 ? 'A little frosty' : 'On thin ice'
   return (
     <main className="shell">
       <header className="topbar">
@@ -280,11 +271,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           {dashboard && <div className="clive-dashboard"><div className="dash-head"><div><small>CLIVE'S CONTROL CENTRE</small><strong>{panel==='home'?'What shall we do?':panel==='weather'?'Weather report':panel==='notes'?'Things worth remembering':'Quick search'}</strong></div><button onClick={()=>setDashboard(false)}><X size={18}/></button></div>{panel==='home'?<div className="dash-grid"><button onClick={()=>{setPanel('weather');fetchWeather().then(setPanelText).catch(e=>setPanelText(e.message))}}><CloudSun/><b>Weather</b><small>What's happening outside</small></button><button onClick={()=>{setPanel('notes');memoryRequest('list').catch(e=>setPanelText(e.message))}}><StickyNote/><b>Memory & notes</b><small>Ideas I've kept safe</small></button><button onClick={()=>setPanel('search')}><Search/><b>Search</b><small>Look something up</small></button></div>:<><button className="dash-back" onClick={()=>{setPanel('home');setPanelText('')}}>← Control centre</button>{panel==='weather'&&<div className="dash-content">{panelText||'Checking the skies...'}<button onClick={()=>fetchWeather().then(setPanelText).catch(e=>setPanelText(e.message))}><RefreshCw size={14}/> Refresh</button></div>}{panel==='notes'&&<div className="dash-content"><div className="note-entry"><input value={noteProject} onChange={e=>setNoteProject(e.target.value)} placeholder="Category (optional)" aria-label="Note category"/><input value={noteDraft} onChange={e=>setNoteDraft(e.target.value)} placeholder="A brilliant idea goes here..."/><button onClick={()=>memoryRequest('save',{project:noteProject,note:noteDraft}).then(()=>setNoteDraft('')).catch(e=>setPanelText(e.message))}><Plus size={15}/> Save</button></div>{panelText&&<p>{panelText}</p>}{notes.map((n:any)=><article className="saved-note" key={n.id}><small>{n.project} · {new Date(n.created_at).toLocaleDateString()}</small><p>{n.note}</p></article>)}{!notes.length&&<p>No notes loaded yet. Add one above or ask me to remember something.</p>}</div>}{panel==='search'&&<div className="dash-content"><form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);fetchSearch(String(f.get('q')||'')).then(setPanelText).catch(x=>setPanelText(x.message))}}><input name="q" placeholder="Search Wikipedia..."/><button><Search size={14}/> Search</button></form><p>{panelText}</p></div>}</>}</div>}
           {!chatOpen ? <>
             <div className="hint"><Sparkles size={13} /> Tap my face for the control centre.</div>
-            <div className="quick-etiquette">
-              <button onClick={()=>etiquette('kind')}><Heart size={13}/> Be nice</button>
-              <button onClick={()=>etiquette('rude')}>Be a bit rude <span>↗</span></button>
-              <button className="chat-launch" onClick={()=>setChatOpen(true)}><MessageCircle size={13}/> Have a chat</button>
-            </div>
+            <div className="quick-etiquette"><button className="chat-launch" onClick={()=>setChatOpen(true)}><MessageCircle size={13}/> Have a chat</button></div>
           </> : <div className="chat-panel">
             <div className="chat-heading"><span><MessageCircle size={15}/> A little chat</span><div className="chat-tools"><button onClick={clearChat} title="Clear this conversation"><RotateCcw size={14}/> Clear</button><button onClick={()=>setSpeakReplies(v=>!v)} aria-label="Toggle spoken replies">{speakReplies ? <Volume2 size={17}/> : <VolumeX size={17}/>} {speakReplies ? 'Voice on' : 'Voice off'}</button></div></div>
             <div className="chat-log">{chat.map(item=><div key={item.id} className={`chat-bubble ${item.role}`}><small>{item.role === 'you' ? 'YOU' : 'CLIVE'}</small><p>{item.text}</p>{item.role === 'clive' && <button className="replay" onClick={()=>speak(item.text)} aria-label="Read this reply aloud"><Volume2 size={14}/> Read aloud</button>}</div>)}{thinking && <div className="chat-bubble clive thinking-bubble"><small>CLIVE</small><p>Thinking<span className="thinking-dots">...</span></p></div>}<div ref={chatEnd}/></div>
@@ -298,9 +285,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           <div className="stats">
             <article><Heart /><strong>{profile.interactions}</strong><small>Interactions</small></article>
             <article><Sparkles /><strong>{mood}</strong><small>Current mood</small></article>
-            <article><Smile /><strong>{rapportLabel}</strong><small>Rapport</small></article>
+            <article><Smile /><strong>{personality.traits?.curiosity ? 'Curious' : 'Getting acquainted'}</strong><small>Character</small></article>
           </div>
-          <div className="rapport-panel"><div className="rapport-top"><span>Relationship meter</span><strong>{profile.rapport}/100</strong></div><div className="rapport-track"><i style={{width:profile.rapport+'%'}}/></div><small>{profile.kindness} kind interactions recorded · Stored on this device</small></div>
           <h3>CLIVE's voice</h3>
           <div className="voice-panel">
             <div className="voice-copy"><strong>A northern sort of chap</strong><small>Choose a British English voice installed on this device. The available voices depend on your phone or browser.</small></div>
@@ -308,19 +294,13 @@ Forecast time: ${data.current.time} (${data.timezone}).`
               <option value="">Automatic · best available British voice</option>
               {voiceChoices.map(v=><option key={v.voiceURI} value={v.voiceURI}>{v.name} · {v.lang}</option>)}
             </select>
-            <div className="voice-actions"><button onClick={previewVoice}><Volume2 size={14}/> Try CLIVE's voice</button><span>{selectedVoiceName || 'Automatic selection'}</span></div>
+            <div className="voice-actions"><span>{selectedVoiceName || 'Automatic selection'}</span></div>
             {!voiceChoices.length && <small className="voice-help">No British voices have appeared yet. Your device may still be loading its speech voices.</small>}
           </div>
-          <h3>Give him a mood</h3>
-          <div className="mood-grid">{moods.map(item => <button key={item} className={mood === item ? 'selected' : ''} onClick={() => react(item)}>{item}</button>)}</div>
-          <h3>Test his manners detector</h3>
-          <div className="test-actions"><button onClick={()=>etiquette('kind')}> <Heart size={14}/> Polite interaction</button><button onClick={()=>etiquette('rude')}>Rude interaction</button></div>
-          <div className="calibration"><label htmlFor="sarcasm">Sarcasm level <strong>{profile.sarcasm}/10</strong></label><input id="sarcasm" type="range" min="0" max="10" value={profile.sarcasm} onChange={e=>setProfile(p=>({...p,sarcasm:Number(e.target.value)}))}/></div>
           <h3>Your CLIVE account</h3>
           <div className="voice-panel"><div className="voice-copy"><strong>Signed in securely</strong><small>Your project memories are tied to your account and will follow you to other devices when you sign in there too.</small></div><button className="back-button" onClick={async()=>{await authClient.signOut();window.location.reload()}}>Sign out</button></div>
           <div className="rapport-panel"><div className="rapport-top"><span>What CLIVE is getting into</span><strong>{Object.keys(personality.interests || {}).length} interests</strong></div><p>{Object.entries(personality.interests || {}).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([name,score])=>`${name} ${Math.round(score*100)}%`).join(' · ') || 'He is still getting to know you. Chat about the things you enjoy.'}</p><small>CLIVE only keeps notes when you explicitly save them.</small></div>
           <p className="admin-note">Your chat history remains on this device. Only notes you explicitly save sync privately to your Neon account.</p>
-          <button className="reset-button" onClick={reset}><RotateCcw size={14}/> Reset test relationship</button>
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
       )}
