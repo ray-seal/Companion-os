@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 type Room = 'bedroom' | 'living' | 'kitchen'
-type Activity = 'relaxing' | 'waffles' | 'reading' | 'sleeping' | 'watching' | 'hobby'
+type Activity = 'relaxing' | 'waffles' | 'reading' | 'sleeping' | 'watching' | 'hobby' | 'baking'
 type Personality = { interests: Record<string, number>; favourites: { possession: string; activity: string; room: string }; habits: string[] }
 const routine = (hour:number): {room:Room;activity:Activity} => {
   if(hour>=7&&hour<9 || hour>=12&&hour<14 || hour>=18&&hour<20) return {room:'kitchen',activity:'waffles'}
@@ -32,7 +32,7 @@ export default function CliveFlat({ onSay, personality }: { onSay:(line:string)=
     if(hour>=9&&hour<22){
       if(strongestInterest==='motorcycles'&&hour>=14&&hour<18){next.room='living';next.activity='hobby'}
       else if(strongestInterest==='crime dramas'&&hour>=19&&hour<22){next.room='living';next.activity='watching'}
-      else if(strongestInterest==='baking'&&(hour>=9&&hour<12||hour>=14&&hour<18)){next.room='kitchen';next.activity='waffles'}
+      else if(strongestInterest==='baking'&&(hour>=9&&hour<12||hour>=14&&hour<18)){next.room='kitchen';next.activity='baking'}
       else if(preferredActivity==='reading'&&hour>=14&&hour<18){next.room='living';next.activity='reading'}
     }
     const timer=window.setInterval(()=>{
