@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 
 type Room = 'bedroom' | 'living' | 'kitchen'
-type Activity = 'relaxing' | 'waffles' | 'reading' | 'sleeping'
+type Activity = 'relaxing' | 'waffles' | 'reading' | 'sleeping' | 'watching' | 'hobby'
+type Personality = { interests: Record<string, number>; favourites: { possession: string; activity: string; room: string }; habits: string[] }
 const routine = (hour:number): {room:Room;activity:Activity} => {
   if(hour>=7&&hour<9 || hour>=12&&hour<14 || hour>=18&&hour<20) return {room:'kitchen',activity:'waffles'}
   if(hour>=22 || hour<7) return {room:'bedroom',activity:'sleeping'}
   if(hour>=14&&hour<18) return {room:'living',activity:'reading'}
   return {room:'living',activity:'relaxing'}
 }
-export default function CliveFlat({ onSay }: { onSay:(line:string)=>void }) {
+export default function CliveFlat({ onSay, personality }: { onSay:(line:string)=>void; personality: Personality }) {
   const [room,setRoom]=useState<Room>('living')
   const [activity,setActivity]=useState<Activity>('relaxing')
   const [view,setView]=useState<Room>('living')
@@ -19,11 +20,21 @@ export default function CliveFlat({ onSay }: { onSay:(line:string)=>void }) {
   const [wander,setWander]=useState(false)
   const track=useRef<HTMLDivElement>(null)
   const hour=clock.getHours()
+  const interests=personality.interests || {}
+  const strongestInterest=Object.entries(interests).sort((a,b)=>b[1]-a[1])[0]?.[0] || ''
+  const preferredActivity=personality.favourites?.activity || 'reading'
+  const favouritePossession=personality.favourites?.possession || 'mug'
   const bedtime=Number(localStorage.getItem('clive-bedtime-hour')||23)
   const sleepy=hour>=bedtime||hour<7
   useEffect(()=>{const t=window.setInterval(()=>setClock(new Date()),30000);return()=>window.clearInterval(t)},[])
   useEffect(()=>{
     const next=routine(hour)
+    if(hour>=9&&hour<22){
+      if(strongestInterest==='motorcycles'&&hour>=14&&hour<18){next.room='living';next.activity='hobby'}
+      else if(strongestInterest==='crime dramas'&&hour>=19&&hour<22){next.room='living';next.activity='watching'}
+      else if(strongestInterest==='baking'&&(hour>=9&&hour<12||hour>=14&&hour<18)){next.room='kitchen';next.activity='waffles'}
+      else if(preferredActivity==='reading'&&hour>=14&&hour<18){next.room='living';next.activity='reading'}
+    }
     const timer=window.setInterval(()=>{
       setRoom(current=>{
         const destination=current==='living'?(Math.random()>.5?'kitchen':'bedroom'):'living'
@@ -33,7 +44,7 @@ export default function CliveFlat({ onSay }: { onSay:(line:string)=>void }) {
     },110000)
     setRoom(next.room);setActivity(next.activity)
     return()=>window.clearInterval(timer)
-  },[hour])
+  },[hour,strongestInterest,preferredActivity])
   useEffect(()=>{
     if(room==='kitchen'&&mugHidden&&!mugFound){
       setMugFound(true)
@@ -60,7 +71,7 @@ export default function CliveFlat({ onSay }: { onSay:(line:string)=>void }) {
       </div>
       <div className="flat-room kitchen">
         <div className="flat-window"/><div className="flat-kitchen">▤<small>WAFFLE STATION</small><span>🧇</span></div>
-        {!mugHidden&&<button className="favourite-mug" onClick={hideMug} title="Tap to hide CLIVE's favourite mug">☕<small>CLIVE'S MUG</small></button>}
+        {!mugHidden&&<button className="favourite-mug" onClick={hideMug} title={`Tap to hide CLIVE's favourite ${favouritePossession}`}>{favouritePossession==='teddy'?'🧸':favouritePossession==='books'?'📚':favouritePossession==='television'?'📺':'☕'}<small>CLIVE'S {favouritePossession.toUpperCase()}</small></button>}
         {mugHidden&&<div className="mug-empty">Something's missing…</div>}
         {room==='kitchen'&&<FlatBot activity={activity} wander={wander} onClick={interrupt}/>}
         <span className="room-name">KITCHEN</span>
