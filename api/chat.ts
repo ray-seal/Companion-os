@@ -95,20 +95,58 @@ INSTANCE PERSONALITY AND CONTINUITY
     }
 
     const model = env.GEMINI_MODEL || 'gemini-3.8-flash';
-    const upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction + personalityInstruction + moodInstruction }] },
-        contents: messages,
-        generationConfig: { temperature: 0.85, maxOutputTokens: 700 }
-      })
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+    const requestBody = JSON.stringify({
+      systemInstruction: { parts: [{ text: systemInstruction + personalityInstruction + moodInstruction }] },
+      contents: messages,
+      generationConfig: { temperature: 0.85, maxOutputTokens: 700 }
     });
 
-    const data = await upstream.json();
-    if (!upstream.ok) {
-      console.error('Gemini request failed:', upstream.status, data?.error?.message || 'Unknown provider error');
-      return res.status(502).json({ error: 'My brain connection had a wobble. Try me again in a moment.' });
+    // Gemini can return transient 503 capacity errors. Retry once with a short
+    // backoff, but keep a strict per-attempt timeout so the browser never waits
+    // anywhere near Vercel's five-minute function limit.
+    let upstream: Response | null = null;
+    let data: any = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 700));
+      try {
+        upstream = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          body: requestBody,
+          signal: AbortSignal.timeout(9000)
+        });
+      } catch (error) {
+        console.error('Gemini network/timeout error:', error);
+        if (attempt === 1) {
+          return res.status(504).json({ error: "I've lost the connection to my AI brain. It isn't responding just now. Give me another try in a moment." });
+        }
+        continue;
+      }
+
+      try { data = await upstream.json(); }
+      catch { data = null; }
+
+      if (upstream.ok) break;
+
+      const status = upstream.status;
+      const message = data?.error?.message || 'Unknown provider error';
+      console.error('Gemini request failed:', status, message);
+
+      const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+      if (transient && attempt === 0) continue;
+
+      if (status === 503) {
+        return res.status(503).json({ error: "Google's AI service is busy at the moment. I've tried again, but it's still full. Give me a minute and try once more." });
+      }
+      if (status === 429) {
+        return res.status(429).json({ error: "The AI service has temporarily limited requests. Give it a moment, then try again." });
+      }
+      return res.status(502).json({ error: "My AI connection returned an unexpected error. Try me again in a moment." });
+    }
+
+    if (!upstream?.ok) {
+      return res.status(503).json({ error: "Google's AI service is temporarily unavailable. Give me a moment and try again." });
     }
 
     const reply = data?.candidates?.[0]?.content?.parts
