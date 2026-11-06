@@ -13,10 +13,32 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
-  async function refreshSession() {
-    try { const result = await authClient.getSession(); setSession(result.data?.session ?? null) }
-    catch { setSession(null) }
-    finally { setLoading(false) }
+  async function refreshSession(): Promise<boolean> {
+    try {
+      const result = await authClient.getSession()
+      if (result.error) throw result.error
+      const nextSession = result.data?.session ?? null
+      setSession(nextSession)
+      return Boolean(nextSession?.user)
+    } catch (error) {
+      setSession(null)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function describeAuthError(error: unknown): string {
+    if (error && typeof error === 'object') {
+      const detail = error as { message?: string; code?: string; status?: number; statusText?: string }
+      const message = typeof detail.message === 'string' ? detail.message : ''
+      const code = typeof detail.code === 'string' ? detail.code : ''
+      const status = typeof detail.status === 'number' ? ` (HTTP ${detail.status})` : ''
+      if (message) return `${message}${code ? ` [${code}]` : ''}${status}`
+      if (code) return `Authentication error: ${code}${status}`
+      if (status) return `Authentication request failed${status}.`
+    }
+    return error instanceof Error ? error.message : 'Authentication failed. Please try again.'
   }
   useEffect(() => {
     refreshSession()
@@ -35,8 +57,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         const result = await (authClient as any).emailOtp.verifyEmail({ email: email.trim(), otp: otp.trim() })
         if (result.error) throw new Error(result.error.message)
         setNotice('Email verified! Signing you in...')
-        await refreshSession()
+        const verifiedSession = await refreshSession()
         setMode('signin')
+        if (!verifiedSession) setNotice('Email verified. Now sign in with the password you created.')
       } else if (mode === 'forgot') {
         const result = await authClient.requestPasswordReset({ email: email.trim(), redirectTo: window.location.origin })
         if (result.error) throw new Error(result.error.message)
@@ -45,9 +68,14 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       } else {
         const result = await authClient.signIn.email({ email: email.trim(), password })
         if (result.error) throw new Error(result.error.message)
-        await refreshSession()
+        const signedIn = await refreshSession()
+        if (!signedIn) {
+          setNotice('The sign-in request was accepted, but no session was returned. This can happen when the browser blocks the authentication cookie. Try opening CLIVE in Safari or Chrome directly, rather than an in-app browser.')
+        }
       }
-    } catch (e) { setError(e instanceof Error ? e.message : 'Authentication failed. Please try again.') }
+    } catch (e) {
+      setError(describeAuthError(e))
+    }
     finally { setBusy(false) }
   }
 
