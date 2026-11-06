@@ -43,6 +43,8 @@ export default function App() {
   const [chatOpen, setChatOpen] = useState(false)
   const [draft, setDraft] = useState('')
   const [speakReplies, setSpeakReplies] = useState(true)
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
+  const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('clive-voice') || '')
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
   const [thinking, setThinking] = useState(false)
@@ -51,6 +53,14 @@ export default function App() {
   const chatEnd = useRef<HTMLDivElement>(null)
 
   useEffect(() => { localStorage.setItem('clive-profile', JSON.stringify(profile)) }, [profile])
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return
+    const loadVoices = () => setAvailableVoices(window.speechSynthesis.getVoices())
+    loadVoices()
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
+    return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
+  }, [])
+  useEffect(() => { if (selectedVoice) localStorage.setItem('clive-voice', selectedVoice) }, [selectedVoice])
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) return
@@ -92,7 +102,12 @@ export default function App() {
     utterance.rate = 0.96
     utterance.pitch = 0.92
     const voices = window.speechSynthesis.getVoices()
-    const british = voices.find(v => v.lang === 'en-GB')
+    const preferred = voices.find(v => v.voiceURI === selectedVoice)
+    const britishVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en-gb'))
+    const maleHints = /\b(male|daniel|arthur|george|oliver|ryan|alfie|james|thomas|lee|guy|fred)\b/i
+    const femaleHints = /\b(female|woman|susan|kate|serena|hazel|sonia|amy|libby|moira)\b/i
+    const likelyMale = britishVoices.find(v => maleHints.test(v.name) && !femaleHints.test(v.name))
+    const british = preferred || likelyMale || britishVoices[0] || voices.find(v => v.lang.toLowerCase().startsWith('en'))
     if (british) utterance.voice = british
     window.speechSynthesis.speak(utterance)
   }
@@ -187,6 +202,9 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     if (speakReplies) window.setTimeout(() => speak(answer), 180)
   }
   const reset = () => { setProfile(initialProfile); setMood('happy'); setMessage("Fresh start. I've conveniently forgotten your previous nonsense."); setLastInteraction(Date.now()) }
+  const voiceChoices = availableVoices.filter(v => v.lang.toLowerCase().startsWith('en-gb'))
+  const selectedVoiceName = voiceChoices.find(v => v.voiceURI === selectedVoice)?.name
+  function previewVoice() { speak("Right then. I'm CLIVE. Put the kettle on, tell me what's happening, and we'll sort it out. Probably.") }
   const rapportLabel = profile.rapport >= 75 ? 'Chummy' : profile.rapport >= 45 ? 'Getting acquainted' : profile.rapport >= 20 ? 'A little frosty' : 'On thin ice'
   return (
     <main className="shell">
@@ -233,6 +251,16 @@ Forecast time: ${data.current.time} (${data.timezone}).`
             <article><Smile /><strong>{rapportLabel}</strong><small>Rapport</small></article>
           </div>
           <div className="rapport-panel"><div className="rapport-top"><span>Relationship meter</span><strong>{profile.rapport}/100</strong></div><div className="rapport-track"><i style={{width:profile.rapport+'%'}}/></div><small>{profile.kindness} kind interactions recorded · Stored on this device</small></div>
+          <h3>CLIVE's voice</h3>
+          <div className="voice-panel">
+            <div className="voice-copy"><strong>A northern sort of chap</strong><small>Choose a British English voice installed on this device. The available voices depend on your phone or browser.</small></div>
+            <select aria-label="Choose CLIVE's voice" value={selectedVoice} onChange={e=>setSelectedVoice(e.target.value)}>
+              <option value="">Automatic · best available British voice</option>
+              {voiceChoices.map(v=><option key={v.voiceURI} value={v.voiceURI}>{v.name} · {v.lang}</option>)}
+            </select>
+            <div className="voice-actions"><button onClick={previewVoice}><Volume2 size={14}/> Try CLIVE's voice</button><span>{selectedVoiceName || 'Automatic selection'}</span></div>
+            {!voiceChoices.length && <small className="voice-help">No British voices have appeared yet. Your device may still be loading its speech voices.</small>}
+          </div>
           <h3>Give him a mood</h3>
           <div className="mood-grid">{moods.map(item => <button key={item} className={mood === item ? 'selected' : ''} onClick={() => react(item)}>{item}</button>)}</div>
           <h3>Test his manners detector</h3>
