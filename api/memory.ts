@@ -2,6 +2,7 @@ import { neon } from '@neondatabase/serverless'
 import { createRemoteJWKSet, jwtVerify } from 'jose'
 
 const AUTH_URL = 'https://ep-little-tooth-zaq7ljaz.neonauth.c-2.eu-west-2.aws.neon.tech/clive/auth'
+const TOKEN_ISSUER = 'https://ep-little-tooth-zaq7ljaz.neonauth.c-2.eu-west-2.aws.neon.tech'
 const JWKS = createRemoteJWKSet(new URL(AUTH_URL + '/.well-known/jwks.json'))
 
 async function authenticatedUser(req: any): Promise<string> {
@@ -27,10 +28,12 @@ export default async function handler(req:any,res:any) {
       const rows=await sql`SELECT profile FROM clive_personality_profiles WHERE user_id=${userId} LIMIT 1`
       if(!rows.length){const created=await sql`INSERT INTO clive_personality_profiles (user_id,profile) VALUES (${userId},${JSON.stringify(defaults)}::jsonb) ON CONFLICT (user_id) DO NOTHING RETURNING profile`;return res.status(200).json({profile:created[0]?.profile||defaults})}
       const old=rows[0].profile||{}
-      const profile={...defaults,...old,version:2,interests:old.interests||{},traits:{...defaults.traits,...(old.traits||{})},preferences:{...defaults.preferences,...(old.preferences||{})},habits:Array.isArray(old.habits)?old.habits:[],memories:Array.isArray(old.memories)?old.memories:[],recentTopics:Array.isArray(old.recentTopics)?old.recentTopics:[]}
+      const profile={...defaults,...old,version:3,interests:{},traits:{...defaults.traits,...(old.traits||{})},preferences:{...defaults.preferences,...(old.preferences||{})},habits:[],memories:[],recentTopics:[]}
+      await sql`UPDATE clive_personality_profiles SET profile=${JSON.stringify(profile)}::jsonb,updated_at=NOW() WHERE user_id=${userId}`
       return res.status(200).json({profile})
     }
-    if(action==='personality_learn') {
+    if(action==='personality_learn') return res.status(410).json({error:'Automatic learning is disabled. Save a note explicitly when you want me to remember something.'})
+    if(action==='personality_learn_legacy_disabled') {
       const raw=String(body.text||'').trim().slice(0,3000)
       if(!raw) return res.status(400).json({error:'Nothing to learn from.'})
       const text=raw.toLowerCase()
