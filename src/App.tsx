@@ -1,98 +1,118 @@
 import { useEffect, useState } from 'react'
-import { Settings2, Heart, Sparkles, Moon, Sun } from 'lucide-react'
+import { Settings2, Heart, Sparkles, Moon, Sun, Smile, MessageCircle, RotateCcw } from 'lucide-react'
 
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
-const greetings: Record<Mood, string> = {
-  happy: "Well hello there. Lovely to see you.",
-  curious: "Hmm. What have you got for me?",
-  sleepy: "Five more minutes. Actually, make it ten.",
-  surprised: "Blimey! Didn't see you there.",
-  confused: "I beg your pardon? Try that again.",
-  cheeky: "Oof, it's you again. Only joking. Mostly.",
-  listening: "I'm all ears. Metaphorically, obviously."
-}
+type Profile = { interactions: number; rapport: number; kindness: number; sarcasm: number }
+const initialProfile: Profile = { interactions: 0, rapport: 55, kindness: 0, sarcasm: 6 }
 const moods: Mood[] = ['happy', 'curious', 'sleepy', 'surprised', 'confused', 'cheeky']
-
+const lines: Record<Mood, string[]> = {
+  happy: ["Well hello there. Lovely to see you.", "Good to see you! What are we up to?", "You're looking positively productive. Shall we?"],
+  curious: ["Hmm. What have you got for me?", "Go on then, I'm intrigued.", "Something interesting is afoot. I can feel it."],
+  sleepy: ["Five more minutes. Actually, make it ten.", "I was having a lovely little daydream.", "Is it bedtime yet? No? Rude."],
+  surprised: ["Blimey! Didn't see you there.", "Crikey. You startled my circuits.", "Well, that's woken me up."],
+  confused: ["I beg your pardon? Try that again.", "My circuits are making a confused noise.", "I have questions. Several, actually."],
+  cheeky: ["Oof, it's you again. Fine, what is it?", "Back for more? I admire your persistence.", "I was enjoying the peace and quiet. Anyway..."],
+  listening: ["I'm all ears. Metaphorically, obviously.", "Right, I'm paying attention.", "Go on. I'm listening."]
+}
+function readProfile(): Profile {
+  try { return { ...initialProfile, ...JSON.parse(localStorage.getItem('clive-profile') || '{}') } }
+  catch { return initialProfile }
+}
 export default function App() {
   const [mood, setMood] = useState<Mood>('happy')
-  const [message, setMessage] = useState(greetings.happy)
+  const [message, setMessage] = useState(lines.happy[0])
   const [admin, setAdmin] = useState(false)
-  const [taps, setTaps] = useState(0)
+  const [profile, setProfile] = useState<Profile>(readProfile)
   const [lastInteraction, setLastInteraction] = useState(Date.now())
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
 
   useEffect(() => {
+    localStorage.setItem('clive-profile', JSON.stringify(profile))
+  }, [profile])
+  useEffect(() => {
+    const handler = (event: Event) => { event.preventDefault(); setInstallPrompt(event) }
+    window.addEventListener('beforeinstallprompt', handler)
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+  useEffect(() => {
     const timer = window.setInterval(() => {
-      if (Date.now() - lastInteraction > 45000 && mood !== 'sleepy') {
-        setMood('sleepy')
-        setMessage(greetings.sleepy)
+      if (Date.now() - lastInteraction > 60000 && mood !== 'sleepy') {
+        setMood('sleepy'); setMessage(lines.sleepy[0])
       }
-    }, 5000)
+    }, 8000)
     return () => window.clearInterval(timer)
   }, [lastInteraction, mood])
 
-  function react(next: Mood) {
+  function react(next: Mood, custom?: string) {
     setMood(next)
-    setMessage(greetings[next])
+    setMessage(custom || lines[next][Math.floor(Math.random() * lines[next].length)])
     setLastInteraction(Date.now())
-    setTaps(value => value + 1)
+    setProfile(p => ({ ...p, interactions: p.interactions + 1 }))
   }
-
   function touchFace() {
-    setLastInteraction(Date.now())
     const next = moods[Math.floor(Math.random() * moods.length)]
     react(next)
   }
-
+  function etiquette(kind: 'kind' | 'rude') {
+    setProfile(p => ({
+      ...p,
+      interactions: p.interactions + 1,
+      kindness: p.kindness + (kind === 'kind' ? 1 : 0),
+      rapport: Math.max(0, Math.min(100, p.rapport + (kind === 'kind' ? 7 : -9)))
+    }))
+    if (kind === 'kind') react('happy', "That's lovely of you. Manners cost nothing, you know.")
+    else react('cheeky', "Oof. Charming. I'll remember that. Probably.")
+  }
+  const reset = () => { setProfile(initialProfile); setMood('happy'); setMessage("Fresh start. I've conveniently forgotten your previous nonsense."); setLastInteraction(Date.now()) }
+  const rapportLabel = profile.rapport >= 75 ? 'Chummy' : profile.rapport >= 45 ? 'Getting acquainted' : profile.rapport >= 20 ? 'A little frosty' : 'On thin ice'
   return (
     <main className="shell">
       <header className="topbar">
         <div className="brand"><span className="brand-dot" /> COMPANION<span className="muted">OS</span></div>
-        <button className="icon-button" aria-label="Open settings" onClick={() => setAdmin(v => !v)}>
-          <Settings2 size={19} />
-        </button>
+        <div className="top-actions">
+          {installPrompt && <button className="install-button" onClick={async()=>{await installPrompt.prompt();setInstallPrompt(null)}}>Install CLIVE</button>}
+          <button className="icon-button" aria-label="Open settings" onClick={() => setAdmin(v => !v)}><Settings2 size={19} /></button>
+        </div>
       </header>
-
       {!admin ? (
         <section className="stage">
           <div className="ambient ambient-one" /><div className="ambient ambient-two" />
           <button className={`bot bot-${mood}`} onClick={touchFace} aria-label="Tap CLIVE to interact">
             <div className="antenna"><i /></div>
-            <div className="head">
-              <div className="face-glass">
-                <div className="eyes">
-                  <span className="eye"><i /></span>
-                  <span className="eye"><i /></span>
-                </div>
-                <div className="mouth" />
-                <div className="cheek cheek-left" /><div className="cheek cheek-right" />
-              </div>
-              <div className="chin-light" />
-            </div>
+            <div className="head"><div className="face-glass">
+              <div className="eyes"><span className="eye"><i /></span><span className="eye"><i /></span></div>
+              <div className="mouth" /><div className="cheek cheek-left" /><div className="cheek cheek-right" />
+            </div><div className="chin-light" /></div>
             <div className="body-base"><span /><span /><span /></div>
           </button>
-          <div className="identity">
-            <div className="eyebrow">YOUR DIGITAL COMPANION</div>
-            <h1>CLIVE<span>.</span></h1>
-            <p>Computer Living In Virtual Environment</p>
-          </div>
+          <div className="identity"><div className="eyebrow">YOUR DIGITAL COMPANION</div><h1>CLIVE<span>.</span></h1><p>Computer Living In Virtual Environment</p></div>
           <div className="speech" key={message}>{message}</div>
           <div className="hint"><Sparkles size={13} /> Tap my face. Go on, I dare you.</div>
+          <div className="quick-etiquette">
+            <button onClick={()=>etiquette('kind')}><Heart size={13}/> Be nice</button>
+            <button onClick={()=>etiquette('rude')}>Be a bit rude <span>↗</span></button>
+          </div>
         </section>
       ) : (
         <section className="admin">
-          <div className="admin-heading"><div><div className="eyebrow">COMPANION CONTROL</div><h2>All about CLIVE</h2></div><span className="online"><i /> ONLINE</span></div>
+          <div className="admin-heading"><div><div className="eyebrow">COMPANION CONTROL</div><h2>All about CLIVE</h2></div><span className="online"><i /> LOCAL MODE</span></div>
           <div className="stats">
-            <article><Heart /><strong>{taps}</strong><small>Interactions</small></article>
+            <article><Heart /><strong>{profile.interactions}</strong><small>Interactions</small></article>
             <article><Sparkles /><strong>{mood}</strong><small>Current mood</small></article>
-            <article><Sun /><strong>Cheeky</strong><small>Personality</small></article>
+            <article><Smile /><strong>{rapportLabel}</strong><small>Rapport</small></article>
           </div>
+          <div className="rapport-panel"><div className="rapport-top"><span>Relationship meter</span><strong>{profile.rapport}/100</strong></div><div className="rapport-track"><i style={{width:profile.rapport+'%'}}/></div><small>{profile.kindness} kind interactions recorded · Stored on this device</small></div>
           <h3>Give him a mood</h3>
           <div className="mood-grid">{moods.map(item => <button key={item} className={mood === item ? 'selected' : ''} onClick={() => react(item)}>{item}</button>)}</div>
-          <p className="admin-note">This is the first control panel. Personality calibration, memory and project tracking will grow here.</p>
+          <h3>Test his manners detector</h3>
+          <div className="test-actions"><button onClick={()=>etiquette('kind')}> <Heart size={14}/> Polite interaction</button><button onClick={()=>etiquette('rude')}>Rude interaction</button></div>
+          <div className="calibration"><label htmlFor="sarcasm">Sarcasm level <strong>{profile.sarcasm}/10</strong></label><input id="sarcasm" type="range" min="0" max="10" value={profile.sarcasm} onChange={e=>setProfile(p=>({...p,sarcasm:Number(e.target.value)}))}/></div>
+          <p className="admin-note">This is an early personality sandbox. Rapport and settings currently save locally on this device. Neon synchronisation comes next.</p>
+          <button className="reset-button" onClick={reset}><RotateCcw size={14}/> Reset test relationship</button>
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
       )}
-      <footer><span>CLIVE v0.1 · FIRST BOOT</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
+      <footer><span>CLIVE v0.2 · PERSONALITY TEST</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
     </main>
   )
 }
