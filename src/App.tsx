@@ -184,10 +184,10 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     let answer = ''
     try {
       const q = question.toLowerCase()
-      const saveMatch=question.match(/(?:make a note|remember|note down|save this)\s+(?:for|under)\s+([^:,.]+)[:,]?\s*(?:that\s+)?(.+)/i)
+      const saveMatch=question.match(/make a note for\s+(.+?)\s+that\s+(.+)/i) || question.match(/(?:remember|note down|save this)\s+(?:for|under)\s+([^:,.]+)[:,]?\s*(.+)/i)
       const recallMatch=question.match(/(?:what (?:was|did) i (?:want|plan|intend) to|what was i going to|remind me what).*?(?:with|for|about)\s+([a-z0-9 -]+)/i)
       if(saveMatch){const project=saveMatch[1].trim(),note=saveMatch[2].trim();await memoryRequest('save',{project,note});answer=`Right, I've tucked that away under ${project}: ${note}`;setDashboard(true);setPanel('notes')}
-      else if(recallMatch||/\b(show|list) my notes\b/i.test(question)){const project=recallMatch?.[1]?.trim()||'';const data=await memoryRequest('list',{project});answer=data.notes.length?`Here's what I've got saved${project?` for ${project}`:''}:\n\n`+data.notes.map((n:any)=>`• ${n.project}: ${n.note}`).join('\n'):`I've got no notes saved${project?` for ${project}`:''} yet.`;setNotes(data.notes);setDashboard(true);setPanel('notes')}
+      else if(recallMatch||/\b(show|list) my notes\b/i.test(question)){const project=(recallMatch?.[1]?.trim()||'').replace(/\s+(again|please|then)$/i,'').trim();const data=await memoryRequest('list',{project});answer=data.notes.length?`Here's what I've got saved${project?` for ${project}`:''}:\n\n`+data.notes.map((n:any)=>`• ${n.project}: ${n.note}`).join('\n'):`I've got no notes saved${project?` for ${project}`:''} yet.`;setNotes(data.notes);setDashboard(true);setPanel('notes')}
       else if (/\b(weather|forecast|raining|temperature outside)\b/.test(q)) {
         answer = await fetchWeather()
       } else if (/^(search|look up|find online|find out about)\b/i.test(question)) {
