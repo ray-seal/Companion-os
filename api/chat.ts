@@ -42,7 +42,12 @@ export default async function handler(req: any, res: any) {
     const systemInstruction = BASE_SYSTEM_INSTRUCTION + (explicitLanguage
       ? "\\n\\nLANGUAGE STYLE\\n- The user has explicitly enabled adult language. You may naturally mirror their level of swearing and use occasional strong British profanity when it fits the humour. Do not force it into every reply. Never use slurs, threats or abusive language toward the user."
       : "\\n\\nLANGUAGE STYLE\\n- Keep language family-friendly. Do not use profanity, sexual insults or explicit expressions. If the user swears, you may acknowledge their tone without repeating strong language.");
-    const incoming = Array.isArray(body?.messages) ? body.messages : [];
+    const personality = body?.personality && typeof body.personality === 'object' ? body.personality : null;
+  const interestSummary = personality?.interests && typeof personality.interests === 'object'
+    ? Object.entries(personality.interests).filter((entry: any) => typeof entry[1] === 'number').sort((a: any,b: any) => b[1]-a[1]).slice(0,6).map(([name,score]) => `${name} (${Math.round(Number(score)*100)}%)`).join(', ')
+    : '';
+  const personalityInstruction = interestSummary ? `\\n\\nTHIS INSTANCE'S DEVELOPING PERSONALITY\\n- The user has shown recurring interests in: ${interestSummary}.\\n- Let these interests naturally inform relevant conversation, curiosity, suggestions and small talk. Do not force them into unrelated answers.\\n- You are developing your own preferences alongside the user. Do not claim real-world experiences or knowledge you do not have. Do not pretend to have read, watched, ridden or baked something unless this is clearly framed as an imagined activity in your virtual flat.` : '';
+  const incoming = Array.isArray(body?.messages) ? body.messages : [];
     const messages: ChatMessage[] = incoming
       .filter((item: any) => item && (item.role === 'user' || item.role === 'model') && typeof item.text === 'string')
       .slice(-12)
@@ -57,7 +62,7 @@ export default async function handler(req: any, res: any) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemInstruction }] },
+        systemInstruction: { parts: [{ text: systemInstruction + personalityInstruction }] },
         contents: messages,
         generationConfig: { temperature: 0.85, maxOutputTokens: 700 }
       })
