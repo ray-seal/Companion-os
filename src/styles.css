@@ -56,3 +56,5 @@ footer{height:38px;padding:0 24px;color:#52657d;display:flex;justify-content:spa
 .chat-compose input:focus{border-color:#58dce988}.chat-compose button{width:42px;border:0;border-radius:11px;background:#1d6672;color:#d7fbff;display:grid;place-items:center}.chat-compose button:disabled{opacity:.35}
 .chat-foot{display:flex;justify-content:space-between;align-items:center;padding:8px 2px 0;color:#607f94;font-size:9px}.chat-foot span{gap:5px}
 @media(max-width:520px){.chat-panel{max-height:39vh}.quick-etiquette{flex-wrap:wrap;justify-content:center}}
+
+.chat-tools{display:flex;align-items:center;gap:12px}.chat-tools button{display:flex;align-items:center;gap:5px}
