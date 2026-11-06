@@ -1,3 +1,3 @@
-import neonAuthProxy from '../_lib/neon-auth-proxy'
+import neonAuthProxy from '../_lib/neon-auth-proxy.js'
 
 export default neonAuthProxy
