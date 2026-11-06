@@ -15,7 +15,7 @@ export default defineConfig({
         theme_color: '#080d18',
         background_color: '#080d18',
         display: 'standalone',
-        orientation: 'landscape',
+        orientation: 'portrait',
         start_url: '/',
         icons: [{ src: '/clive.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }]
       },
