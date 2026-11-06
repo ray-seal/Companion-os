@@ -41,7 +41,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     return error instanceof Error ? error.message : 'Authentication failed. Please try again.'
   }
   useEffect(() => {
-    refreshSession()
+    refreshSession().catch(error => setError(describeAuthError(error)))
     return () => {}
   }, [])
 
