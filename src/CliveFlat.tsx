@@ -48,7 +48,7 @@ export default function CliveFlat({ onSay, personality }: { onSay:(line:string)=
   useEffect(()=>{
     if(room==='kitchen'&&mugHidden&&!mugFound){
       setMugFound(true)
-      onSay(explicit?"Hang on. Where's my favourite mug? Who's moved the bloody thing? I leave it alone for five minutes!":"Hang on. Where's my favourite mug? I leave it alone for five minutes!")
+      onSay(explicit?`Hang on. Where's my favourite ${favouritePossession}? Who's moved the bloody thing? I leave it alone for five minutes!`:`Hang on. Where's my favourite ${favouritePossession}? I leave it alone for five minutes!`)
     }
   },[room,mugHidden,mugFound,explicit,onSay])
   function visit(next:Room){setView(next);track.current?.scrollTo({left:({bedroom:0,living:1,kitchen:2}[next])*((track.current?.clientWidth)||0),behavior:'smooth'})}
@@ -71,7 +71,7 @@ export default function CliveFlat({ onSay, personality }: { onSay:(line:string)=
       </div>
       <div className="flat-room kitchen">
         <div className="flat-window"/><div className="flat-kitchen">▤<small>WAFFLE STATION</small><span>🧇</span></div>
-        {!mugHidden&&<button className="favourite-mug" onClick={hideMug} title={`Tap to hide CLIVE's favourite ${favouritePossession}`}>{favouritePossession==='teddy'?'🧸':favouritePossession==='books'?'📚':favouritePossession==='television'?'📺':'☕'}<small>CLIVE'S {favouritePossession.toUpperCase()}</small></button>}
+        {!mugHidden&&<button className="favourite-mug" onClick={hideMug} title={`Tap to hide CLIVE's favourite ${favouritePossession}`}>{favouritePossession==='teddy'?'🧸':favouritePossession==='books'?'📚':favouritePossession==='television'?'📺':favouritePossession==='helmet'?'🪖':favouritePossession==='cookbook'?'📖':'☕'}<small>CLIVE'S {favouritePossession.toUpperCase()}</small></button>}
         {mugHidden&&<div className="mug-empty">Something's missing…</div>}
         {room==='kitchen'&&<FlatBot activity={activity} wander={wander} onClick={interrupt}/>}
         <span className="room-name">KITCHEN</span>
