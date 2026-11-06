@@ -29,16 +29,42 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   function describeAuthError(error: unknown): string {
-    if (error && typeof error === 'object') {
-      const detail = error as { message?: string; code?: string; status?: number; statusText?: string }
-      const message = typeof detail.message === 'string' ? detail.message : ''
-      const code = typeof detail.code === 'string' ? detail.code : ''
-      const status = typeof detail.status === 'number' ? ` (HTTP ${detail.status})` : ''
-      if (message) return `${message}${code ? ` [${code}]` : ''}${status}`
-      if (code) return `Authentication error: ${code}${status}`
-      if (status) return `Authentication request failed${status}.`
+    const safeDetails: string[] = []
+    const seen = new Set<unknown>()
+
+    function inspect(value: unknown, depth = 0) {
+      if (!value || typeof value !== 'object' || depth > 2 || seen.has(value)) return
+      seen.add(value)
+      const item = value as Record<string, unknown>
+      for (const key of ['message', 'code', 'status', 'statusText', 'reason', 'field', 'details', 'issues', 'validationErrors']) {
+        const part = item[key]
+        if (part === undefined || part === null) continue
+        if (typeof part === 'string' || typeof part === 'number') {
+          const line = key + ': ' + String(part).slice(0, 240)
+          if (!safeDetails.includes(line)) safeDetails.push(line)
+        } else if (Array.isArray(part)) {
+          const summary = part.slice(0, 4).map(entry => {
+            if (typeof entry === 'string') return entry.slice(0, 120)
+            if (entry && typeof entry === 'object') {
+              const issue = entry as Record<string, unknown>
+              return [issue.path, issue.field, issue.message, issue.code].filter(v => typeof v === 'string').join(' ')
+            }
+            return ''
+          }).filter(Boolean).join('; ')
+          if (summary) safeDetails.push(key + ': ' + summary)
+        } else if (typeof part === 'object') {
+          inspect(part, depth + 1)
+        }
+      }
+      if (item.cause) inspect(item.cause, depth + 1)
+      if (item.error) inspect(item.error, depth + 1)
     }
-    return error instanceof Error ? error.message : 'Authentication failed. Please try again.'
+
+    inspect(error)
+    if (error instanceof Error && error.message && !safeDetails.some(line => line.startsWith('message:'))) {
+      safeDetails.unshift('message: ' + error.message.slice(0, 240))
+    }
+    return safeDetails.length ? safeDetails.join(' · ') : 'Authentication failed. Please try again.'
   }
   useEffect(() => {
     refreshSession().catch(error => setError(describeAuthError(error)))
@@ -50,12 +76,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     try {
       if (mode === 'signup') {
         const result = await authClient.signUp.email({ name: name.trim(), email: email.trim(), password })
-        if (result.error) throw new Error(result.error.message)
+        if (result.error) throw result.error
         setNotice('Check your email and enter the verification code below.')
         setMode('verify')
       } else if (mode === 'verify') {
         const result = await (authClient as any).emailOtp.verifyEmail({ email: email.trim(), otp: otp.trim() })
-        if (result.error) throw new Error(result.error.message)
+        if (result.error) throw result.error
         setNotice('Email verified! Signing you in...')
         const verifiedSession = await refreshSession()
         setMode('signin')
