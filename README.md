@@ -6,7 +6,7 @@ A cheeky, expressive digital companion designed as a lightweight, installable PW
 
 ## Current status
 
-Version 0.1 is the visual first-boot prototype:
+The current prototype includes:
 - Expressive CSS-rendered robot face
 - Six selectable moods and tap-to-react behaviour
 - Basic idle/sleep behaviour
@@ -28,7 +28,9 @@ npm run preview
 
 - **Frontend:** React + TypeScript + Vite PWA
 - **Character:** CSS/vector-style components and animation state machine
-- **Backend:** Vercel serverless API (`/api/chat`)
+- **Backend:** Vercel serverless API (`/api/chat`, `/api/weather`, `/api/search`)
+- **Weather:** Open-Meteo forecast endpoint; browser location permission is requested only when weather is asked
+- **Quick search:** Wikipedia reference search, with source links
 - **AI:** Gemini API, called server-side; the UI falls back to local demo replies until a key is configured
 - **Database:** Neon PostgreSQL, accessed only through the API
 - **Memory:** Local-first cache plus explicit, user-controlled long-term memories
@@ -48,7 +50,7 @@ The Raspberry Pi is a display client, not the source of truth. It must never con
 
 ## Identity
 
-CLIVE's name: **Computer Living In Virtual Environment**.
+CLIVE's name: **Companion Living In a Virtual Environment**.
 
 Repository: `ray-seal/Companion-os`.
 
@@ -65,3 +67,10 @@ The chat endpoint is ready at `/api/chat`. It keeps the provider key on the serv
 The endpoint accepts only POST requests, limits conversation context to the latest 12 messages, and caps each message at 3,000 characters. Keep API keys out of GitHub and frontend code. The free provider tier has its own quotas and terms; check those before use.
 
 For local development, copy `.env.example` to `.env.local` and add your key there. Do not commit `.env.local`.
+
+
+## Free tools currently wired in
+
+- Ask CLIVE about the weather to request browser location permission and fetch current conditions plus today's forecast from Open-Meteo. Location coordinates are sent to the server only for that weather request and are not stored by this app.
+- Start a message with `search for ...` or `look up ...` to search Wikipedia and receive source links. This is a lightweight reference search, not a general-purpose web search engine.
+- The Gemini conversation endpoint remains separate and works once `GEMINI_API_KEY` is configured in Vercel.
