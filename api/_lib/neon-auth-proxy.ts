@@ -45,6 +45,17 @@ export default async function neonAuthProxy(req: any, res: any) {
       redirect: 'manual'
     })
 
+    const responseBody = new Uint8Array(await upstream.arrayBuffer())
+    if (upstream.status >= 400) {
+      let errorCode = 'unknown'
+      try {
+        const payload = JSON.parse(new TextDecoder().decode(responseBody))
+        errorCode = String(payload.code || payload.error || payload.message || 'unknown').slice(0, 100)
+      } catch {}
+      // Diagnostic only: never log credentials, email addresses, cookies, or request bodies.
+      console.warn('Neon Auth upstream error', { method, pathname, status: upstream.status, errorCode })
+    }
+
     res.status(upstream.status)
     upstream.headers.forEach((value, key) => {
       if (key.toLowerCase() === 'set-cookie') return
@@ -55,7 +66,6 @@ export default async function neonAuthProxy(req: any, res: any) {
     const cookies = upstream.headers.getSetCookie?.() || []
     if (cookies.length) res.setHeader('set-cookie', cookies)
 
-    const responseBody = new Uint8Array(await upstream.arrayBuffer())
     return res.end(responseBody)
   } catch (error) {
     console.error('Neon Auth proxy failed:', error)
