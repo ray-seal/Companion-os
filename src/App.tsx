@@ -22,7 +22,7 @@ function readProfile(): Profile {
 function localReply(question: string): string {
   const q = question.toLowerCase()
   if (/\b(hello|hi|hiya|hey)\b/.test(q)) return "Hello! Lovely to have a natter. What would you like to know?"
-  if (q.includes('your name') || q.includes('who are you')) return "I'm CLIVE. Computer Living In Virtual Environment. A very important job title for a little collection of pixels."
+  if (q.includes('your name') || q.includes('who are you')) return "I'm CLIVE. Companion Living In a Virtual Environment. A very important job title for a little collection of pixels."
   if (q.includes('how are you')) return "I'm doing splendidly, thank you. All circuits present and mostly correct. How are you?"
   if (q.includes('time')) return "I haven't got my clock connected yet. That's going on the jobs list."
   if (q.includes('joke')) return "I tried to tell a UDP joke, but I'm not sure anyone got it. I'll work on my material."
@@ -110,7 +110,7 @@ export default function App() {
             </div><div className="chin-light" /></div>
             <div className="body-base"><span /><span /><span /></div>
           </button>
-          <div className="identity"><div className="eyebrow">YOUR DIGITAL COMPANION</div><h1>CLIVE<span>.</span></h1><p>Computer Living In Virtual Environment</p></div>
+          <div className="identity"><div className="eyebrow">YOUR DIGITAL COMPANION</div><h1>CLIVE<span>.</span></h1><p>Companion Living In a Virtual Environment</p></div>
           <div className="speech" key={message}>{message}</div>
           {!chatOpen ? <>
             <div className="hint"><Sparkles size={13} /> Tap my face. Go on, I dare you.</div>
