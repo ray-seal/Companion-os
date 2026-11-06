@@ -17,9 +17,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     try {
       const result = await authClient.getSession()
       if (result.error) throw result.error
-      const nextSession = result.data ?? null
+      const nextSession = result.data?.session ?? null
       setSession(nextSession)
-      return Boolean(nextSession?.userId)
+      return Boolean(result.data?.user)
     } catch (error) {
       setSession(null)
       throw error
