@@ -86,3 +86,41 @@ footer{height:38px;padding:0 24px;color:#52657d;display:flex;justify-content:spa
 .auth-links{display:flex;justify-content:space-between;gap:12px;margin-top:17px;flex-wrap:wrap}
 .auth-links button{border:0;background:none;color:#79dce7;font-size:11px;cursor:pointer;padding:5px 0}
 .auth-card>p:not(.auth-intro){color:#8ea9bc;font-size:12px}
+
+/* CLIVE's little flat */
+.clive-flat{position:relative;z-index:1;width:min(720px,94vw);margin:0 auto 18px;padding:13px;border:1px solid #5adbe944;border-radius:19px;background:#0b1726eF;box-shadow:0 18px 50px #0007;overflow:hidden}
+.flat-label,.flat-options{display:flex;justify-content:space-between;align-items:center;color:#8bb8ca;font:9px 'DM Mono',monospace;letter-spacing:.13em;padding:2px 4px 10px}
+.flat-room{height:245px;position:relative;overflow:hidden;border-radius:12px;background:linear-gradient(#243b53 0 68%,#785b49 68% 100%);transition:background .5s}
+.clive-flat.kitchen .flat-room{background:linear-gradient(#314653 0 68%,#86654b 68% 100%)}
+.clive-flat.bedroom .flat-room{background:linear-gradient(#182840 0 68%,#55475a 68% 100%)}
+.flat-sky{position:absolute;right:30px;top:30px;color:#d7e9ff;opacity:.55;display:flex;gap:22px}
+.flat-window{position:absolute;right:9%;top:25px;width:116px;height:95px;border:7px solid #b7a38d;background:linear-gradient(#83a8bf,#d3c7a7);box-shadow:inset 0 0 0 3px #35485d}
+.flat-window:before{content:"";position:absolute;left:50%;top:0;bottom:0;border-left:4px solid #b7a38d}.flat-window:after{content:"";position:absolute;left:0;right:0;top:50%;border-top:4px solid #b7a38d}
+.flat-shelf{position:absolute;left:8%;top:32px;width:150px;height:9px;background:#9a7557;display:flex;justify-content:space-around;color:#e8d4ac;font-size:20px}
+.flat-lamp{position:absolute;left:42%;top:23px;color:#ffe3a2;font-size:33px;filter:drop-shadow(0 0 14px #ffcf6a)}
+.flat-floor{position:absolute;bottom:0;left:0;right:0;height:12px;background:#3b2d2b}
+.flat-sofa{position:absolute;left:10%;bottom:12px;width:180px;height:55px;border-radius:20px 20px 5px 5px;background:#426c7b;color:transparent;box-shadow:inset 0 -9px #294654}
+.flat-sofa:before{content:"";position:absolute;left:-12px;right:-12px;bottom:-8px;height:16px;background:#263b49;border-radius:5px}
+.flat-sofa small,.flat-kitchen small,.flat-bed small{position:absolute;bottom:-23px;left:0;color:#d7c6b2;font:8px 'DM Mono',monospace;letter-spacing:.1em}
+.flat-kitchen{position:absolute;right:4%;bottom:12px;width:180px;height:67px;background:#71818a;border-top:12px solid #b6b7aa;color:#f7e5bb;text-align:center;font-size:23px}
+.flat-kitchen span{position:absolute;right:12px;top:-40px;font-size:24px}
+.flat-bed{position:absolute;left:8%;bottom:12px;width:210px;height:56px;border-radius:10px 10px 3px 3px;background:#7c718c;display:none}
+.flat-bed:before{content:"";position:absolute;left:12px;top:-14px;width:58px;height:22px;background:#d6d2df;border-radius:8px}
+.clive-flat.bedroom .flat-bed{display:block}.clive-flat.bedroom .flat-sofa{display:none}.clive-flat.bedroom .flat-kitchen{display:none}
+.clive-flat.living .flat-kitchen{opacity:.0}.clive-flat.kitchen .flat-sofa{opacity:.0}
+.flat-character-wrap{position:absolute;left:48%;bottom:13px;z-index:2;display:flex;align-items:center;flex-direction:column;transition:left 1.5s}
+.clive-flat.kitchen .flat-character-wrap{left:74%}.clive-flat.bedroom .flat-character-wrap{left:27%}
+.flat-character{width:57px;height:72px;border:0;background:none;position:relative;cursor:pointer;animation:flatBob 3s ease-in-out infinite}
+.flat-antenna{position:absolute;top:0;left:27px;width:4px;height:12px;background:#8194a7}.flat-face{position:absolute;top:9px;left:4px;width:49px;height:43px;border-radius:43%;background:linear-gradient(140deg,#61758b,#182638);border:3px solid #91a6b7;display:flex;justify-content:center;align-items:center;gap:9px;box-shadow:0 0 13px #54dce977}
+.flat-face i{width:7px;height:10px;border-radius:50%;background:#6af0f5;box-shadow:0 0 7px #6af0f5}.flat-face b{position:absolute;bottom:7px;width:11px;height:4px;border-bottom:2px solid #6af0f5;border-radius:50%}
+.flat-body{position:absolute;bottom:1px;left:15px;width:28px;height:17px;border-radius:8px 8px 4px 4px;background:#52677d}
+.flat-character.sleeping .flat-face i{transform:scaleY(.18)}.flat-character.sleeping{animation:flatSleep 2.8s ease-in-out infinite}
+.flat-character.waffles .flat-body:after{content:"🧇";position:absolute;left:25px;top:-17px;font-size:18px}
+.flat-character.reading:after{content:"📖";position:absolute;left:37px;top:28px;font-size:17px}
+.flat-character.walking{animation:flatWalk .3s infinite alternate}
+.flat-thought{white-space:nowrap;margin-top:3px;padding:4px 7px;border-radius:8px;background:#07111ddd;color:#c9e7ed;font-size:8px}
+.flat-controls{display:flex;justify-content:center;gap:7px;padding:11px 0 5px;flex-wrap:wrap}
+.flat-controls button{border:1px solid #ffffff20;background:#ffffff0a;color:#b8d9e7;border-radius:9px;padding:7px 10px;font-size:9px}
+.flat-options{padding:6px 4px 0;letter-spacing:0}.flat-options label{display:flex;gap:7px;align-items:center}.flat-options input{accent-color:#58dce9}
+@keyframes flatBob{50%{transform:translateY(-4px)}}@keyframes flatSleep{50%{transform:translateY(4px) rotate(3deg)}}@keyframes flatWalk{to{transform:translateY(-5px) rotate(5deg)}}
+@media(max-width:520px){.clive-flat{padding:8px}.flat-room{height:210px}.flat-sofa{width:125px}.flat-kitchen{width:125px}.flat-window{width:88px;height:75px}.flat-shelf{width:100px}.flat-thought{font-size:7px}}
