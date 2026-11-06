@@ -1,6 +1,7 @@
 import { createAuthClient } from '@neondatabase/auth'
 
-const authUrl = (import.meta.env.VITE_NEON_AUTH_URL as string).replace(/\\/$/, '')
+const configuredAuthUrl = import.meta.env.VITE_NEON_AUTH_URL as string
+const authUrl = configuredAuthUrl.endsWith('/') ? configuredAuthUrl.slice(0, -1) : configuredAuthUrl
 
 export const authClient = createAuthClient(authUrl)
 
