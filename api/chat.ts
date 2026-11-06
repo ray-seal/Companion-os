@@ -1,6 +1,6 @@
 type ChatMessage = { role: 'user' | 'model'; parts: { text: string }[] }
 
-const SYSTEM_INSTRUCTION = `You are CLIVE, short for Companion Living In a Virtual Environment.
+const BASE_SYSTEM_INSTRUCTION = `You are CLIVE, short for Companion Living In a Virtual Environment.
 
 PERSONALITY
 - Be warm, witty, curious and conversational, with dry British humour.
@@ -38,6 +38,10 @@ export default async function handler(req: any, res: any) {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+    const explicitLanguage = body?.explicitLanguage === true;
+    const systemInstruction = BASE_SYSTEM_INSTRUCTION + (explicitLanguage
+      ? "\\n\\nLANGUAGE STYLE\\n- The user has explicitly enabled adult language. You may naturally mirror their level of swearing and use occasional strong British profanity when it fits the humour. Do not force it into every reply. Never use slurs, threats or abusive language toward the user."
+      : "\\n\\nLANGUAGE STYLE\\n- Keep language family-friendly. Do not use profanity, sexual insults or explicit expressions. If the user swears, you may acknowledge their tone without repeating strong language.");
     const incoming = Array.isArray(body?.messages) ? body.messages : [];
     const messages: ChatMessage[] = incoming
       .filter((item: any) => item && (item.role === 'user' || item.role === 'model') && typeof item.text === 'string')
@@ -53,7 +57,7 @@ export default async function handler(req: any, res: any) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
+        systemInstruction: { parts: [{ text: systemInstruction }] },
         contents: messages,
         generationConfig: { temperature: 0.85, maxOutputTokens: 700 }
       })
