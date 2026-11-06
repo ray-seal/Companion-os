@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getCliveToken, authClient } from './auth'
+import CliveFlat from './CliveFlat'
 import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search, FolderKanban, StickyNote, LayoutDashboard, X, Plus, RefreshCw } from 'lucide-react'
 
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
@@ -211,7 +212,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           messages: history.slice(-12).map(item => ({
             role: item.role === 'you' ? 'user' : 'model',
             text: item.text
-          }))
+          })),
+          explicitLanguage: localStorage.getItem('clive-explicit-language') === 'true'
         })
       })
       const data = await response.json()
@@ -242,6 +244,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
       {!admin ? (
         <section className="stage">
           <div className="ambient ambient-one" /><div className="ambient ambient-two" />
+          <CliveFlat onSay={(line) => { setMessage(line); setLastInteraction(Date.now()) }} />
           <button className={`bot bot-${mood}`} onClick={touchFace} aria-label="Tap CLIVE to interact">
             <div className="antenna"><i /></div>
             <div className="head"><div className="face-glass">
