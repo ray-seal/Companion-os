@@ -26,6 +26,7 @@ function localReply(question: string): string {
   if (/\b(hello|hi|hiya|hey)\b/.test(q)) return "Hello! Lovely to have a natter. What would you like to know?"
   if (q.includes('your name') || q.includes('who are you')) return "I'm CLIVE. Companion Living In a Virtual Environment. A very important job title for a little collection of pixels."
   if (q.includes('how are you')) return "I'm doing splendidly, thank you. All circuits present and mostly correct. How are you?"
+  if (q.includes('weather')) return "I'd love to check that for you, but my live weather connection isn't fitted yet. That's one of the next jobs on my list."
   if (q.includes('time')) return "I haven't got my clock connected yet. That's going on the jobs list."
   if (q.includes('joke')) return "I tried to tell a UDP joke, but I'm not sure anyone got it. I'll work on my material."
   if (q.includes('help')) return "I'm still learning my tricks. At the moment you can chat with me, hear my replies, and adjust my personality in settings. A proper AI brain is next."
