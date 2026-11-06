@@ -12,7 +12,9 @@
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "@neondatabase/serverless": "^1.0.2"
+    "@neondatabase/serverless": "^1.0.2",
+    "@neondatabase/auth": "^1.0.0",
+    "jose": "^6.0.11"
   },
   "devDependencies": {
     "@types/react": "^18.3.18",
