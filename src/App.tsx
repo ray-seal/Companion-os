@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search } from 'lucide-react'
+import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search, FolderKanban, StickyNote, LayoutDashboard, X, Plus, RefreshCw } from 'lucide-react'
 
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
 type Profile = { interactions: number; rapport: number; kindness: number; sarcasm: number }
@@ -41,6 +41,14 @@ export default function App() {
   const [lastInteraction, setLastInteraction] = useState(Date.now())
   const [installPrompt, setInstallPrompt] = useState<any>(null)
   const [chatOpen, setChatOpen] = useState(false)
+  const [dashboard, setDashboard] = useState(false)
+  const [panel, setPanel] = useState<'home'|'weather'|'projects'|'notes'|'search'>('home')
+  const [panelText, setPanelText] = useState('')
+  const [notes, setNotes] = useState<any[]>([])
+  const [noteDraft, setNoteDraft] = useState('')
+  const [noteProject, setNoteProject] = useState('General')
+  const [memoryPin, setMemoryPin] = useState(() => localStorage.getItem('clive-memory-pin') || '')
+  const [memoryReady, setMemoryReady] = useState(false)
   const [draft, setDraft] = useState('')
   const [speakReplies, setSpeakReplies] = useState(true)
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
@@ -115,7 +123,7 @@ export default function App() {
     setMood(next); setMessage(custom || lines[next][Math.floor(Math.random() * lines[next].length)])
     setLastInteraction(Date.now()); setProfile(p => ({ ...p, interactions: p.interactions + 1 }))
   }
-  function touchFace() { react(moods[Math.floor(Math.random() * moods.length)]) }
+  function touchFace() { setDashboard(true); setPanel('home'); react('curious', 'Control centre open. What are we poking at?') }
   function etiquette(kind: 'kind' | 'rude') {
     setProfile(p => ({ ...p, interactions: p.interactions + 1, kindness: p.kindness + (kind === 'kind' ? 1 : 0), rapport: Math.max(0, Math.min(100, p.rapport + (kind === 'kind' ? 7 : -9))) }))
     if (kind === 'kind') react('happy', "That's lovely of you. Manners cost nothing, you know.")
@@ -153,6 +161,8 @@ Today: ${data.today.condition}, high ${data.today.high}°C and low ${data.today.
 Forecast time: ${data.current.time} (${data.timezone}).`
   }
 
+  async function memoryRequest(action: string, payload: any = {}) { if (!memoryPin) throw new Error('Set your private memory PIN in settings first.'); const response=await fetch('/api/memory',{method:'POST',headers:{'Content-Type':'application/json','x-clive-pin':memoryPin},body:JSON.stringify({action,...payload})}); const data=await response.json(); if(!response.ok) throw new Error(data.error||'Memory unavailable'); setMemoryReady(true); if(Array.isArray(data.notes)) setNotes(data.notes); return data }
+
   async function fetchSearch(query: string): Promise<string> {
     const response = await fetch('/api/search?q=' + encodeURIComponent(query))
     const data = await response.json()
@@ -174,7 +184,11 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     let answer = ''
     try {
       const q = question.toLowerCase()
-      if (/\b(weather|forecast|raining|temperature outside)\b/.test(q)) {
+      const saveMatch=question.match(/(?:make a note|remember|note down|save this)\s+(?:for|under)\s+([^:,.]+)[:,]?\s*(?:that\s+)?(.+)/i)
+      const recallMatch=question.match(/(?:what (?:was|did) i (?:want|plan|intend) to|what was i going to|remind me what).*?(?:with|for|about)\s+([a-z0-9 -]+)/i)
+      if(saveMatch){const project=saveMatch[1].trim(),note=saveMatch[2].trim();await memoryRequest('save',{project,note});answer=`Right, I've tucked that away under ${project}: ${note}`;setDashboard(true);setPanel('notes')}
+      else if(recallMatch||/\b(show|list) my notes\b/i.test(question)){const project=recallMatch?.[1]?.trim()||'';const data=await memoryRequest('list',{project});answer=data.notes.length?`Here's what I've got saved${project?` for ${project}`:''}:\n\n`+data.notes.map((n:any)=>`• ${n.project}: ${n.note}`).join('\n'):`I've got no notes saved${project?` for ${project}`:''} yet.`;setNotes(data.notes);setDashboard(true);setPanel('notes')}
+      else if (/\b(weather|forecast|raining|temperature outside)\b/.test(q)) {
         answer = await fetchWeather()
       } else if (/^(search|look up|find online|find out about)\b/i.test(question)) {
         const query = question.replace(/^(search for|search|look up|find online|find out about)\s*/i, '').trim()
@@ -228,8 +242,9 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           </button>
           <div className="identity"><div className="eyebrow">YOUR DIGITAL COMPANION</div><h1>CLIVE<span>.</span></h1><p>Companion Living In a Virtual Environment</p></div>
           <div className="speech" key={message}>{message}</div>
+          {dashboard && <div className="clive-dashboard"><div className="dash-head"><div><small>CLIVE'S CONTROL CENTRE</small><strong>{panel==='home'?'What shall we do?':panel==='weather'?'Weather report':panel==='projects'?'Your projects':panel==='notes'?'Things worth remembering':'Quick search'}</strong></div><button onClick={()=>setDashboard(false)}><X size={18}/></button></div>{panel==='home'?<div className="dash-grid"><button onClick={()=>{setPanel('weather');fetchWeather().then(setPanelText).catch(e=>setPanelText(e.message))}}><CloudSun/><b>Weather</b><small>What's happening outside</small></button><button onClick={()=>setPanel('projects')}><FolderKanban/><b>Projects</b><small>Your current creations</small></button><button onClick={()=>{setPanel('notes');memoryRequest('list').catch(e=>setPanelText(e.message))}}><StickyNote/><b>Memory & notes</b><small>Ideas I've kept safe</small></button><button onClick={()=>setPanel('search')}><Search/><b>Search</b><small>Look something up</small></button></div>:<><button className="dash-back" onClick={()=>{setPanel('home');setPanelText('')}}>← Control centre</button>{panel==='weather'&&<div className="dash-content">{panelText||'Checking the skies...'}<button onClick={()=>fetchWeather().then(setPanelText).catch(e=>setPanelText(e.message))}><RefreshCw size={14}/> Refresh</button></div>}{panel==='projects'&&<div className="dash-grid">{['CardBuddy','PalDex','SignBuddy','Inclusive Karaoke','CompanionOS'].map(p=><button key={p} onClick={()=>{setNoteProject(p);setPanel('notes');memoryRequest('list',{project:p}).then(d=>setNotes(d.notes)).catch(e=>setPanelText(e.message))}}><FolderKanban/><b>{p}</b><small>Saved ideas</small></button>)}</div>}{panel==='notes'&&<div className="dash-content"><div className="note-entry"><select value={noteProject} onChange={e=>setNoteProject(e.target.value)}><option>General</option><option>CardBuddy</option><option>PalDex</option><option>SignBuddy</option><option>Inclusive Karaoke</option><option>CompanionOS</option></select><input value={noteDraft} onChange={e=>setNoteDraft(e.target.value)} placeholder="A brilliant idea goes here..."/><button onClick={()=>memoryRequest('save',{project:noteProject,note:noteDraft}).then(()=>setNoteDraft('')).catch(e=>setPanelText(e.message))}><Plus size={15}/> Save</button></div>{panelText&&<p>{panelText}</p>}{notes.map((n:any)=><article className="saved-note" key={n.id}><small>{n.project} · {new Date(n.created_at).toLocaleDateString()}</small><p>{n.note}</p></article>)}{!notes.length&&<p>No notes loaded yet. Add one above or ask me to remember something.</p>}</div>}{panel==='search'&&<div className="dash-content"><form onSubmit={e=>{e.preventDefault();const f=new FormData(e.currentTarget);fetchSearch(String(f.get('q')||'')).then(setPanelText).catch(x=>setPanelText(x.message))}}><input name="q" placeholder="Search Wikipedia..."/><button><Search size={14}/> Search</button></form><p>{panelText}</p></div>}</>}</div>}
           {!chatOpen ? <>
-            <div className="hint"><Sparkles size={13} /> Tap my face. Go on, I dare you.</div>
+            <div className="hint"><Sparkles size={13} /> Tap my face for the control centre.</div>
             <div className="quick-etiquette">
               <button onClick={()=>etiquette('kind')}><Heart size={13}/> Be nice</button>
               <button onClick={()=>etiquette('rude')}>Be a bit rude <span>↗</span></button>
@@ -266,12 +281,12 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           <h3>Test his manners detector</h3>
           <div className="test-actions"><button onClick={()=>etiquette('kind')}> <Heart size={14}/> Polite interaction</button><button onClick={()=>etiquette('rude')}>Rude interaction</button></div>
           <div className="calibration"><label htmlFor="sarcasm">Sarcasm level <strong>{profile.sarcasm}/10</strong></label><input id="sarcasm" type="range" min="0" max="10" value={profile.sarcasm} onChange={e=>setProfile(p=>({...p,sarcasm:Number(e.target.value)}))}/></div>
-          <p className="admin-note">Your personality settings and the last 100 chat messages are saved on this device. This is local memory for now. Neon will let CLIVE remember across devices; his proper AI brain is still on the build list.</p>
+          <h3>CLIVE's private memory</h3><div className="voice-panel"><div className="voice-copy"><strong>Memory PIN</strong><small>Enter the private PIN configured in Vercel. It is checked server-side.</small></div><input type="password" value={memoryPin} onChange={e=>{setMemoryPin(e.target.value);localStorage.setItem('clive-memory-pin',e.target.value)}} placeholder="Your private PIN"/><small>{memoryReady?'Memory connection tested successfully.':'Add DATABASE_URL and CLIVE_MEMORY_PIN in Vercel to enable persistent notes.'}</small></div><p className="admin-note">Chat history and personality settings remain on this device. Project notes live in CLIVE's private Neon database.</p>
           <button className="reset-button" onClick={reset}><RotateCcw size={14}/> Reset test relationship</button>
           <button className="back-button" onClick={() => setAdmin(false)}>Back to CLIVE</button>
         </section>
       )}
-      <footer><span>CLIVE v0.7 · WEATHER & SEARCH</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
+      <footer><span>CLIVE v0.8 · CONTROL CENTRE & MEMORY</span><span>MADE OF PIXELS & PERSONALITY</span></footer>
     </main>
   )
 }
