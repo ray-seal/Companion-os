@@ -36,7 +36,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       if (!value || typeof value !== 'object' || depth > 2 || seen.has(value)) return
       seen.add(value)
       const item = value as Record<string, unknown>
-      for (const key of ['message', 'code', 'status', 'statusText', 'reason', 'field', 'details', 'issues', 'validationErrors']) {
+      for (const key of ['message', 'code', 'status', 'statusText', 'reason', 'field', 'details', 'issues', 'validationErrors', 'body', 'data', 'response', 'statusCode']) {
         const part = item[key]
         if (part === undefined || part === null) continue
         if (typeof part === 'string' || typeof part === 'number') {
@@ -93,7 +93,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         setMode('signin')
       } else {
         const result = await authClient.signIn.email({ email: email.trim(), password })
-        if (result.error) throw new Error(result.error.message)
+        if (result.error) throw result.error
         const signedIn = await refreshSession()
         if (!signedIn) {
           setNotice('The sign-in request was accepted, but no session was returned. This can happen when the browser blocks the authentication cookie. Try opening CLIVE in Safari or Chrome directly, rather than an in-app browser.')
