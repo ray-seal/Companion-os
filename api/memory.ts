@@ -8,7 +8,7 @@ async function authenticatedUser(req: any): Promise<string> {
   const header = String(req.headers?.authorization || '')
   const token = header.startsWith('Bearer ') ? header.slice(7) : ''
   if (!token) throw new Error('Sign in to access your private memories.')
-  const { payload } = await jwtVerify(token, JWKS, { issuer: AUTH_URL })
+  const { payload } = await jwtVerify(token, JWKS, { issuer: TOKEN_ISSUER })
   if (typeof payload.sub !== 'string' || !payload.sub) throw new Error('Your sign-in token did not contain a user identity.')
   return payload.sub
 }
