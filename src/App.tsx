@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { getCliveToken, authClient } from './auth'
-import CliveFlat from './CliveFlat'
 import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search, FolderKanban, StickyNote, LayoutDashboard, X, Plus, RefreshCw } from 'lucide-react'
 
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
@@ -8,7 +7,7 @@ type Profile = { interactions: number; rapport: number; kindness: number; sarcas
 type ChatMessage = { id: number; role: 'you' | 'clive'; text: string }
 type Personality = { interests: Record<string, number>; traits: { curiosity: number; sarcasm: number; sentimentality: number }; favourites: { possession: string; activity: string; room: string }; habits: string[]; memories: string[] }
 const starterPersonality: Personality = { interests: {}, traits: { curiosity: 0.7, sarcasm: 0.6, sentimentality: 0.5 }, favourites: { possession: 'mug', activity: 'reading', room: 'living' }, habits: [], memories: [] }
-const starterChat: ChatMessage[] = [{ id: 1, role: 'clive', text: "Right then. Ask me something. I'm still growing my brain, so bear with me." }]
+const starterChat: ChatMessage[] = [{ id: 1, role: 'clive', text: "Right then, I'm CLIVE. A little curious, occasionally cheeky, and always up for a proper conversation. What's happening?" }]
 function readChat(): ChatMessage[] { try { const saved = JSON.parse(localStorage.getItem('clive-chat') || 'null'); return Array.isArray(saved) && saved.length ? saved : starterChat } catch { return starterChat } }
 const initialProfile: Profile = { interactions: 0, rapport: 55, kindness: 0, sarcasm: 6 }
 const moods: Mood[] = ['happy', 'curious', 'sleepy', 'surprised', 'confused', 'cheeky']
@@ -269,7 +268,6 @@ Forecast time: ${data.current.time} (${data.timezone}).`
       {!admin ? (
         <section className="stage">
           <div className="ambient ambient-one" /><div className="ambient ambient-two" />
-          <CliveFlat personality={personality} onSay={(line) => { setMessage(line); setLastInteraction(Date.now()) }} />
           <button className={`bot bot-${mood}`} onClick={touchFace} aria-label="Tap CLIVE to interact">
             <div className="antenna"><i /></div>
             <div className="head"><div className="face-glass">
