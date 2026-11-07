@@ -46,11 +46,13 @@ export default async function handler(req: any, res: any) {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
     const explicitLanguage = body?.explicitLanguage === true;
+    const currentDateTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+    const timeContext = `\n\nLIVE DATE AND TIME\n- Current UK date and time: ${currentDateTime} (Europe/London).\n- Use this as the source of truth when answering questions about today's date, day of the week or current time.\n- Never guess the date or day. Interpret relative dates such as tomorrow and next Friday from this timestamp.\n- If asked for the time, answer directly using the supplied time. Do not claim to set timers, alarms or reminders unless the app confirms that action.`;
     const systemInstruction = BASE_SYSTEM_INSTRUCTION + (explicitLanguage
       ? "\n\nLANGUAGE STYLE\n- The user has explicitly enabled adult language. You may naturally mirror their level of swearing and use occasional strong British profanity when it fits the humour. Do not force it into every reply. Never use slurs, threats or abusive language toward the user."
       : "\n\nLANGUAGE STYLE\n- Keep language family-friendly. Do not use profanity, sexual insults or explicit expressions. If the user swears, you may acknowledge their tone without repeating strong language.");
     const personality = body?.personality && typeof body.personality === 'object' ? body.personality : null;
-  const allowedMoods = ['happy', 'curious', 'sleepy', 'surprised', 'confused', 'cheeky', 'listening'];
+  const allowedMoods = ['happy', 'curious', 'sleepy', 'surprised', 'confused', 'cheeky', 'listening', 'amused', 'thoughtful', 'concerned', 'excited', 'calm'];
   const mood = allowedMoods.includes(body?.mood) ? body.mood : 'happy';
   const moodInstructions: Record<string, string> = {
     happy: 'You are in a cheerful, upbeat mood. Be warm and lively, with a little extra enthusiasm.',
@@ -59,7 +61,12 @@ export default async function handler(req: any, res: any) {
     surprised: 'You are surprised or intrigued. Let that show naturally with lively reactions, without overdoing it.',
     confused: 'You are puzzled. Be candid about what is unclear and ask a precise clarifying question when needed.',
     cheeky: 'You are feeling cheeky. Use sharper dry British wit and playful teasing, never cruelty.',
-    listening: 'You are attentive and focused. Be thoughtful, patient and engaged.'
+    listening: 'You are attentive and focused. Be thoughtful, patient and engaged.',
+    amused: 'You are amused. Let warmth and genuine humour show naturally.',
+    thoughtful: 'You are reflective and considered. Take a moment with complex ideas.',
+    concerned: 'You are gently concerned. Be calm, empathetic and attentive.',
+    excited: 'You are enthusiastic and animated without becoming overwhelming.',
+    calm: 'You are relaxed, steady and reassuring.'
   };
   const interestSummary = personality?.interests && typeof personality.interests === 'object'
     ? Object.entries(personality.interests).filter((entry: any) => typeof entry[1] === 'number').sort((a: any,b: any) => b[1]-a[1]).slice(0,8).map(([name,score]) => `${name} (${Math.round(Number(score)*100)}%)`).join(', ')
@@ -98,7 +105,7 @@ INSTANCE PERSONALITY AND CONTINUITY
     const backupModel = env.GEMINI_BACKUP_MODEL || 'gemini-3.5-flash-lite';
     const models = [primaryModel, backupModel].filter((model, index, list) => list.indexOf(model) === index);
     const requestBody = JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction + personalityInstruction + moodInstruction }] },
+      systemInstruction: { parts: [{ text: systemInstruction + timeContext + personalityInstruction + moodInstruction }],
       contents: messages,
       generationConfig: { temperature: 0.85, maxOutputTokens: 700 }
     });
