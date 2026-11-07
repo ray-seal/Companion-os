@@ -44,8 +44,18 @@ function conversationalMood(question: string, answer: string): Mood {
   return 'happy'
 }
 function isWeatherRequest(question: string): boolean {
-  const q = question.trim()
-  return /^(?:(?:hey\s+)?(?:what(?:'s| is)\s+(?:the\s+)?weather\\b|how(?:'s| is)\s+the\s+weather\\b|(?:can you|could you|please)\s+(?:check|get|tell me)\s+(?:the\s+)?weather\\b|(?:check|get|show me|give me)\s+(?:the\s+)?(?:weather|forecast)\\b|what(?:'s| is)\s+(?:the\s+)?forecast\\b|(?:will|is|was|has|does|did)\s+it\s+(?:going to\s+)?(?:rain|snow|be sunny|be windy)\\b|is it\s+(?:raining|snowing|sunny|cloudy|windy)\\b|what(?:'s| is)\s+the\s+temperature\s+outside\\b|(?:weather|forecast)\s+(?:(?:in|for)\s+[a-z][a-z -]*|today|tonight|tomorrow|this weekend)\\b)/i.test(q)
+  const q = question.trim().toLowerCase()
+  const patterns = [
+    /^(hey )?(what is|what's|how is|how's) the weather\b/,
+    /^(can you|could you|please) (check|get|tell me) the weather\b/,
+    /^(check|get|show me|give me) (the )?(weather|forecast)\b/,
+    /^(what is|what's) the forecast\b/,
+    /^(will it|is it going to|is it) (rain|snow|be sunny|be windy|rainy|snowing|sunny|cloudy|windy)\b/,
+    /^(what is|what's) the temperature outside\b/,
+    /^(weather|forecast) (in|for) [a-z][a-z -]*$/,
+    /^(weather|forecast) (today|tonight|tomorrow|this weekend)$/
+  ]
+  return patterns.some(pattern => pattern.test(q))
 }
 function parseSpokenNumber(value: string): number {
   const words: Record<string, number> = {one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,fifteen:15,twenty:20,thirty:30,forty:40,'forty-five':45,sixty:60}
