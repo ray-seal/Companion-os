@@ -29,8 +29,9 @@ function readProfile(): Profile {
 }
 function conversationalMood(question: string, answer: string): Mood {
   const text = (question + ' ' + answer).toLowerCase()
-  if (/\b(sorry|upset|worried|anxious|rough day|struggling|painful|sad|scared)\b/.test(text)) return 'curious'
-  if (/\b(wow|brilliant|fantastic|amazing|excited|can't wait|excellent)\b/.test(text)) return 'surprised'
+  if (/\b(worried|anxious|struggling|painful|sad|scared|hurt|unwell|concern)\b/.test(text)) return 'concerned'
+  if (/\b(sorry|upset|rough day)\b/.test(text)) return 'calm'
+  if (/\b(wow|blimey|crikey|unexpected|surprised)\b/.test(text)) return 'surprised'
   if (/\b(why|how does|what if|curious|wonder|explain|tell me about)\b/.test(question.toLowerCase())) return 'curious'
   if (/\b(bloody|daft|ridiculous|nonsense|taking the piss|cheeky)\b/.test(text)) return 'cheeky'
   if (/\b(confused|don't understand|unclear|what do you mean)\b/.test(text)) return 'confused'
