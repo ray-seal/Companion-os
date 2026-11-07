@@ -288,9 +288,16 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     let answer = ''
     try {
       const q = question.toLowerCase()
-      const numberWords = 'number|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|forty-five|sixty'
-      const durationMatch = question.match(new RegExp('(?:set|start|create)?\\s*(?:a\\s+)?timer\\s+(?:for\\s+)?(\\d+|'+numberWords+')\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)','i'))
-        || question.match(new RegExp('^(\\d+|'+numberWords+')\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\\s+timer
+      const numberWords = 'one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|sixty'
+      const amount = '(\\d+|' + numberWords + ')'
+      const unit = '(seconds?|secs?|minutes?|mins?|hours?|hrs?)'
+      const durationMatch = question.match(new RegExp('(?:set|start|create)?\\s*(?:a\\s+)?timer\\s+(?:for\\s+)?' + amount + '\\s*' + unit, 'i'))
+        || question.match(new RegExp('^' + amount + '\\s*' + unit + '\\s+timer$', 'i'))
+        || question.match(new RegExp('(?:give me|count down|for)\\s+' + amount + '\\s*' + unit, 'i'))
+      const reminderMatch = question.match(new RegExp('remind me in\\s+' + amount + '\\s*' + unit + '\\s+to\\s+(.+)', 'i'))
+      const alarmMatch = question.match(/(?:set|create|put on) (?:an? )?alarm (?:for|at) (\\d{1,2})(?::(\\d{2}))?(?:\\s*(am|pm))?(?:\\s+(today|tomorrow))?/i)
+        || question.match(/wake me (?:up )?at (\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?(?:\\s+(today|tomorrow))?/i)
+      const timeQuestion = /^(?:clive[, ]*)?(?:(?:what(?:'s| is)|tell me|show me|give me) (?:the )?time|what time is it|what day is it|what(?:'s| is) (?:today'?s )?date)(?: please)?[?.!]*$/i.test(question.trim())
       const saveMatch=question.match(/make a note for\s+(.+?)\s+that\s+(.+)/i) || question.match(/(?:remember|note down|save this)\s+(?:for|under)\s+([^:,.]+)[:,]?\s*(.+)/i)
       const recallMatch=question.match(/(?:what (?:was|did) i (?:want|plan|intend) to|what was i going to|remind me what).*?(?:with|for|about)\s+([a-z0-9 -]+)/i)
       if (timeQuestion) { setDisplayMode('clock'); const stamp = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()); answer = "It's " + stamp + " here in the UK." }
