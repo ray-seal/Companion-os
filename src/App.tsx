@@ -35,6 +35,11 @@ function conversationalMood(question: string, answer: string): Mood {
   if (/\b(bloody|daft|ridiculous|nonsense|taking the piss|cheeky)\b/.test(text)) return 'cheeky'
   if (/\b(confused|don't understand|unclear|what do you mean)\b/.test(text)) return 'confused'
   if (/\b(tired|sleepy|bedtime|going to bed)\b/.test(text)) return 'sleepy'
+  if (/\b(lol|haha|🤣|😂|funny|hilarious)\b/.test(text)) return 'amused'
+  if (/\b(worried|scared|pain|hurt|unwell|concern)\b/.test(text)) return 'concerned'
+  if (/\b(thinking|consider|interesting point|on reflection)\b/.test(text)) return 'thoughtful'
+  if (/\b(brilliant|can't wait|exciting|fantastic|yes!)\b/.test(text)) return 'excited'
+  if (/\b(thanks|thank you|lovely|appreciate)\b/.test(text)) return 'calm'
   return 'happy'
 }
 function isWeatherRequest(question: string): boolean {
