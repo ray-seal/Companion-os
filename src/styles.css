@@ -158,7 +158,8 @@ footer{height:38px;padding:0 24px;color:#52657d;display:flex;justify-content:spa
 .antenna-timer i{background:#ffd45c!important;box-shadow:0 0 15px #ffd45c,0 0 30px #ffd45c99!important}
 .antenna-thinking i{background:#a58cff!important;box-shadow:0 0 15px #a58cff,0 0 30px #a58cff99!important}
 .antenna-idle i{background:#65eaf4}
-.face-clock,.face-timer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#72f4ff;font:700 27px 'DM Mono',monospace;letter-spacing:.04em;text-shadow:0 0 9px #55eaf4,0 0 20px #55eaf488}
+.face-clock,.face-timer{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;color:#72f4ff;font:700 27px 'DM Mono',monospace;letter-spacing:.04em;text-shadow:0 0 9px #55eaf4,0 0 20px #55eaf488}
+.bot-display-clock .cheek,.bot-display-timer .cheek{opacity:0}
 .face-timer{font-size:25px;letter-spacing:.08em}
 .bot-display-clock .mouth,.bot-display-timer .mouth{opacity:0}
 .bot-amused .eye:first-child{transform:scaleY(.72)}.bot-amused .mouth{width:26px;height:10px;border-bottom:3px solid #65eaf4;border-radius:0 0 50% 50%}
