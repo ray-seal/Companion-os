@@ -39,7 +39,7 @@ function conversationalMood(question: string, answer: string): Mood {
 }
 function isWeatherRequest(question: string): boolean {
   const q = question.trim()
-  return /^(?:(?:hey\\s+)?(?:what(?:'s| is)\\s+(?:the\\s+)?weather\\b|how(?:'s| is)\\s+the\\s+weather\\b|(?:can you|could you|please)\\s+(?:check|get|tell me)\\s+(?:the\\s+)?weather\\b|(?:check|get|show me|give me)\\s+(?:the\\s+)?(?:weather|forecast)\\b|what(?:'s| is)\\s+(?:the\\s+)?forecast\\b|(?:will|is|was|has|does|did)\\s+it\\s+(?:going to\\s+)?(?:rain|snow|be sunny|be windy)\\b|is it\\s+(?:raining|snowing|sunny|cloudy|windy)\\b|what(?:'s| is)\\s+the\\s+temperature\\s+outside\\b|(?:weather|forecast)\\s+(?:(?:in|for)\\s+[a-z][a-z -]*|today|tonight|tomorrow|this weekend)\\b)/i.test(q)
+  return /^(?:(?:hey\s+)?(?:what(?:'s| is)\s+(?:the\s+)?weather\\b|how(?:'s| is)\s+the\s+weather\\b|(?:can you|could you|please)\s+(?:check|get|tell me)\s+(?:the\s+)?weather\\b|(?:check|get|show me|give me)\s+(?:the\s+)?(?:weather|forecast)\\b|what(?:'s| is)\s+(?:the\s+)?forecast\\b|(?:will|is|was|has|does|did)\s+it\s+(?:going to\s+)?(?:rain|snow|be sunny|be windy)\\b|is it\s+(?:raining|snowing|sunny|cloudy|windy)\\b|what(?:'s| is)\s+the\s+temperature\s+outside\\b|(?:weather|forecast)\s+(?:(?:in|for)\s+[a-z][a-z -]*|today|tonight|tomorrow|this weekend)\\b)/i.test(q)
 }
 function localReply(question: string): string {
   const q = question.toLowerCase()
@@ -268,12 +268,14 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     let answer = ''
     try {
       const q = question.toLowerCase()
-      const durationMatch = question.match(/(?:set|start|create)?\\s*(?:a\\s+)?timer\\s+(?:for\\s+)?(\\d+)\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i)
-      const reminderMatch = question.match(/remind me in\\s+(\\d+)\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\\s+to\\s+(.+)/i)
+      const durationMatch = question.match(/(?:set|start|create)?\s*(?:a\s+)?timer\s+(?:for\s+)?(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i)
+      const reminderMatch = question.match(/remind me in\s+(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\s+to\s+(.+)/i)
+      const alarmMatch = question.match(/(?:set|create) (?:an? )?alarm (?:for|at) (\d{1,2})(?::(\d{2}))?(?:\s*(am|pm))?(?:\s+(today|tomorrow))?/i)
       const timeQuestion = /^(?:clive[, ]*)?(?:what(?:'s| is) the time|what time is it|tell me the time|show me the time|what(?:'s| is) today's date|what day is it)\\??$/i.test(question.trim())
       const saveMatch=question.match(/make a note for\s+(.+?)\s+that\s+(.+)/i) || question.match(/(?:remember|note down|save this)\s+(?:for|under)\s+([^:,.]+)[:,]?\s*(.+)/i)
       const recallMatch=question.match(/(?:what (?:was|did) i (?:want|plan|intend) to|what was i going to|remind me what).*?(?:with|for|about)\s+([a-z0-9 -]+)/i)
       if (timeQuestion) { setDisplayMode('clock'); const stamp = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()); answer = "It's " + stamp + " here in the UK." }
+      else if (alarmMatch) { let hour=Number(alarmMatch[1]),minute=Number(alarmMatch[2]||0); const meridiem=(alarmMatch[3]||'').toLowerCase(); if(meridiem==='pm'&&hour<12)hour+=12; if(meridiem==='am'&&hour===12)hour=0; const due=new Date(); if(alarmMatch[4]==='tomorrow')due.setDate(due.getDate()+1); due.setHours(hour,minute,0,0); if(due.getTime()<=Date.now()&&!alarmMatch[4])due.setDate(due.getDate()+1); const label='Alarm for '+due.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); setAlarms(xs=>[...xs,{id:Date.now(),label,dueAt:due.getTime()}]); if('Notification' in window && Notification.permission==='default') Notification.requestPermission(); answer='Alarm set for '+due.toLocaleString('en-GB',{weekday:'long',hour:'2-digit',minute:'2-digit'})+'.'; }
       else if (reminderMatch) { const n=Number(reminderMatch[1]),u=reminderMatch[2].toLowerCase(),ms=n*(u.startsWith('sec')?1000:u.startsWith('hour')||u.startsWith('hr')?3600000:60000),label=reminderMatch[3].trim(); setAlarms(xs=>[...xs,{id:Date.now(),label,dueAt:Date.now()+ms}]); answer="Right, I'll remind you to "+label+" in "+n+" "+u+"."; }
       else if (durationMatch) { const n=Number(durationMatch[1]),u=durationMatch[2].toLowerCase(),ms=n*(u.startsWith('sec')?1000:u.startsWith('hour')||u.startsWith('hr')?3600000:60000); setTimers(xs=>[...xs,{id:Date.now(),label:'Timer',dueAt:Date.now()+ms}]); setDisplayMode('timer'); answer="Timer set for "+n+" "+u+". I'll let you know when it's finished."; }
       else if (/how long.*(left|remaining)|time left on (?:my )?timer/i.test(question)) { const next=[...timers,...alarms].sort((x,y)=>x.dueAt-y.dueAt)[0]; if(next){const s=Math.max(0,Math.ceil((next.dueAt-Date.now())/1000)),m=Math.floor(s/60),r=s%60;setDisplayMode('timer');answer=next.label+": "+(m?m+" minute"+(m===1?"":"s")+" and ":"")+r+" seconds remaining.";}else answer="You haven't got any timers or reminders running."; }
