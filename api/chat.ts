@@ -105,7 +105,7 @@ INSTANCE PERSONALITY AND CONTINUITY
     const backupModel = env.GEMINI_BACKUP_MODEL || 'gemini-3.5-flash-lite';
     const models = [primaryModel, backupModel].filter((model, index, list) => list.indexOf(model) === index);
     const requestBody = JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction + timeContext + personalityInstruction + moodInstruction }],
+      systemInstruction: { parts: [{ text: systemInstruction + timeContext + personalityInstruction + moodInstruction }] },
       contents: messages,
       generationConfig: { temperature: 0.85, maxOutputTokens: 700 }
     });
