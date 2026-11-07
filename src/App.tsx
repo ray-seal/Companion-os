@@ -32,12 +32,16 @@ function conversationalMood(question: string, answer: string): Mood {
   if (/\b(tired|sleepy|bedtime|going to bed)\b/.test(text)) return 'sleepy'
   return 'happy'
 }
+function isWeatherRequest(question: string): boolean {
+  const q = question.trim()
+  return /^(?:(?:hey\s+)?(?:what(?:'s| is)\s+(?:the\s+)?weather\b|how(?:'s| is)\s+the\s+weather\b|(?:can you|could you|please)\s+(?:check|get|tell me)\s+(?:the\s+)?weather\b|(?:check|get|show me|give me)\s+(?:the\s+)?(?:weather|forecast)\b|what(?:'s| is)\s+(?:the\s+)?forecast\b|(?:will|is|was|has|does|did)\s+it\s+(?:rain|snow|be sunny|be windy)\b|is it\s+(?:raining|snowing|sunny|cloudy|windy)\b|what(?:'s| is)\s+the\s+temperature\s+outside\b|(?:weather|forecast)\s+(?:today|tonight|tomorrow|this weekend)\b)/i.test(q)
+}
 function localReply(question: string): string {
   const q = question.toLowerCase()
   if (/\b(hello|hi|hiya|hey)\b/.test(q)) return "Hello! Lovely to have a natter. What would you like to know?"
   if (q.includes('your name') || q.includes('who are you')) return "I'm CLIVE. Companion Living In a Virtual Environment. A very important job title for a little collection of pixels."
   if (q.includes('how are you')) return "I'm doing splendidly, thank you. All circuits present and mostly correct. How are you?"
-  if (q.includes('weather')) return "I'd love to check that for you, but my live weather connection isn't fitted yet. That's one of the next jobs on my list."
+  if (isWeatherRequest(question)) return "I'd love to check that for you, but my live weather connection isn't fitted yet. That's one of the next jobs on my list."
   if (q.includes('time')) return "I haven't got my clock connected yet. That's going on the jobs list."
   if (q.includes('joke')) return "I tried to tell a UDP joke, but I'm not sure anyone got it. I'll work on my material."
   if (q.includes('help')) return "I'm still learning my tricks. At the moment you can chat with me, hear my replies, and adjust my personality in settings. A proper AI brain is next."
@@ -225,7 +229,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
       const recallMatch=question.match(/(?:what (?:was|did) i (?:want|plan|intend) to|what was i going to|remind me what).*?(?:with|for|about)\s+([a-z0-9 -]+)/i)
       if(saveMatch){const project=saveMatch[1].trim(),note=saveMatch[2].trim();await memoryRequest('save',{project,note});answer=`Right, I've tucked that away under ${project}: ${note}`;setDashboard(true);setPanel('notes')}
       else if(recallMatch||/\b(show|list) my notes\b/i.test(question)){const project=(recallMatch?.[1]?.trim()||'').replace(/\s+(again|please|then)$/i,'').trim();const data=await memoryRequest('list',{project});answer=data.notes.length?`Here's what I've got saved${project?` for ${project}`:''}:\n\n`+data.notes.map((n:any)=>`• ${n.project}: ${n.note}`).join('\n'):`I've got no notes saved${project?` for ${project}`:''} yet.`;setNotes(data.notes);setDashboard(true);setPanel('notes')}
-      else if (/\b(weather|forecast|raining|temperature outside)\b/.test(q)) {
+      else if (isWeatherRequest(question)) {
         answer = await fetchWeather()
       } else if (/^(search|look up|find online|find out about)\b/i.test(question)) {
         const query = question.replace(/^(search for|search|look up|find online|find out about)\s*/i, '').trim()
@@ -304,7 +308,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           </> : <div className="chat-panel">
             <div className="chat-heading"><span><MessageCircle size={15}/> A little chat</span><div className="chat-tools"><button onClick={clearChat} title="Clear this conversation"><RotateCcw size={14}/> Clear</button><button onClick={()=>setSpeakReplies(v=>!v)} aria-label="Toggle spoken replies">{speakReplies ? <Volume2 size={17}/> : <VolumeX size={17}/>} {speakReplies ? 'Voice on' : 'Voice off'}</button></div></div>
             <div className="chat-log">{chat.map(item=><div key={item.id} className={`chat-bubble ${item.role}`}><small>{item.role === 'you' ? 'YOU' : 'CLIVE'}</small><p>{item.text}</p>{item.role === 'clive' && <button className="replay" onClick={()=>speak(item.text)} aria-label="Read this reply aloud"><Volume2 size={14}/> Read aloud</button>}</div>)}{thinking && <div className="chat-bubble clive thinking-bubble"><small>CLIVE</small><p>Thinking<span className="thinking-dots">...</span></p></div>}<div ref={chatEnd}/></div>
-            <form className="chat-compose" onSubmit={e=>{e.preventDefault();if(listening) recognition.current?.stop();sendMessage()}}><button type="button" className={listening ? 'mic-button listening' : 'mic-button'} onClick={toggleListening} disabled={!voiceSupported} aria-label={listening ? 'Stop listening' : 'Speak to CLIVE'} title={voiceSupported ? 'Speak to CLIVE' : 'Speech recognition is not supported in this browser'}><Mic size={17}/></button><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder={listening ? "I'm listening..." : "Ask me something..."} aria-label="Your message"/><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message"><Send size={17}/></button></form>
+            <form className="chat-compose" onSubmit={e=>{e.preventDefault();if(listening) recognition.current?.stop();sendMessage()}}><button type="button" className={listening ? 'mic-button listening' : 'mic-button'} onClick={toggleListening} disabled={!voiceSupported} aria-label={listening ? 'Stop listening' : 'Speak to CLIVE'} title={voiceSupported ? 'Speak to CLIVE' : 'Speech recognition is not supported in this browser'}><Mic size={17}/></button><textarea rows={2} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();if(!thinking&&draft.trim())sendMessage()}}} placeholder={listening ? "I'm listening..." : "Ask me something..."} aria-label="Your message" /><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message"><Send size={17}/></button></form>
             <div className="chat-foot"><span>{listening ? 'Listening... tap the mic to finish' : voiceSupported ? "Mic to speak · Ask weather or 'search for…'" : 'Voice input unavailable in this browser'}</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
           </div>}
         </section>
