@@ -16,7 +16,12 @@ const lines: Record<Mood, string[]> = {
   surprised: ["Blimey! Didn't see you there.", "Crikey. You startled my circuits.", "Well, that's woken me up."],
   confused: ["I beg your pardon? Try that again.", "My circuits are making a confused noise.", "I have questions. Several, actually."],
   cheeky: ["Oof, it's you again. Fine, what is it?", "Back for more? I admire your persistence.", "I was enjoying the peace and quiet. Anyway..."],
-  listening: ["I'm all ears. Metaphorically, obviously.", "Right, I'm paying attention.", "Go on. I'm listening."]
+  listening: ["I'm all ears. Metaphorically, obviously.", "Right, I'm paying attention.", "Go on. I'm listening."],
+  amused: ["That's tickled my circuits.", "I'm enjoying this more than I should."],
+  thoughtful: ["Give me a moment to turn that over.", "There's a bit more to that than first appears."],
+  concerned: ["Hang on, let's take that carefully.", "I'm listening. No rush."],
+  excited: ["Now we're talking!", "That's got my little lights flashing."],
+  calm: ["Steady as she goes.", "No hurry. We've got time."]
 }
 function readProfile(): Profile {
   try { return { ...initialProfile, ...JSON.parse(localStorage.getItem('clive-profile') || '{}') } }
@@ -133,7 +138,7 @@ export default function App() {
       happy: { rate: 1.02, pitch: 1.02 }, curious: { rate: 0.98, pitch: 1.08 },
       sleepy: { rate: 0.86, pitch: 0.88 }, surprised: { rate: 1.08, pitch: 1.12 },
       confused: { rate: 0.93, pitch: 0.98 }, cheeky: { rate: 1.01, pitch: 0.94 },
-      listening: { rate: 0.96, pitch: 0.96 }
+      listening: { rate: 0.96, pitch: 0.96 }, amused: { rate: 1.04, pitch: 1.05 }, thoughtful: { rate: 0.92, pitch: 1 }, concerned: { rate: 0.94, pitch: 1.02 }, excited: { rate: 1.1, pitch: 1.12 }, calm: { rate: 0.96, pitch: 0.98 }
     }
     utterance.rate = voiceStyle[mood].rate
     utterance.pitch = voiceStyle[mood].pitch
