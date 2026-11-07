@@ -74,6 +74,11 @@ export default function App() {
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
   const [thinking, setThinking] = useState(false)
+  const [displayMode, setDisplayMode] = useState<'normal' | 'clock' | 'timer'>('normal')
+  const [clockNow, setClockNow] = useState(new Date())
+  const [timers, setTimers] = useState<Array<{id:number;label:string;dueAt:number}>>(() => { try { return JSON.parse(localStorage.getItem('clive-timers') || '[]') } catch { return [] } })
+  const [alarms, setAlarms] = useState<Array<{id:number;label:string;dueAt:number}>>(() => { try { return JSON.parse(localStorage.getItem('clive-alarms') || '[]') } catch { return [] } })
+  const [antennaStatus, setAntennaStatus] = useState<'idle'|'listening'|'timer'|'thinking'>('idle')
   const recognition = useRef<any>(null)
   const [chat, setChat] = useState<ChatMessage[]>(readChat)
   const [personality, setPersonality] = useState<Personality>(starterPersonality)
@@ -109,6 +114,32 @@ export default function App() {
     return () => { try { engine.abort() } catch {} }
   }, [])
   useEffect(() => { localStorage.setItem('clive-chat', JSON.stringify(chat.slice(-100))) }, [chat])
+  useEffect(() => { localStorage.setItem('clive-timers', JSON.stringify(timers)) }, [timers])
+  useEffect(() => { localStorage.setItem('clive-alarms', JSON.stringify(alarms)) }, [alarms])
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now(); setClockNow(new Date(now))
+      const dueTimers = timers.filter(item => item.dueAt <= now)
+      const dueAlarms = alarms.filter(item => item.dueAt <= now)
+      if (dueTimers.length || dueAlarms.length) {
+        const fired = [...dueTimers, ...dueAlarms]
+        const labels = fired.map(item => item.label).join(' and ')
+        const spoken = labels + (fired.length === 1 ? ' has' : ' have') + ' finished.'
+        setMessage(spoken); setMood('surprised'); setDisplayMode('timer')
+        setTimers(current => current.filter(item => item.dueAt > now))
+        setAlarms(current => current.filter(item => item.dueAt > now))
+        if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(spoken)) }
+        if ('Notification' in window && Notification.permission === 'granted') new Notification('CLIVE', { body: spoken })
+      }
+    }
+    tick()
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
+  }, [timers, alarms])
+  useEffect(() => {
+    if (displayMode === 'clock') { const id = window.setTimeout(() => setDisplayMode('normal'), 6000); return () => window.clearTimeout(id) }
+  }, [displayMode])
+  useEffect(() => { setAntennaStatus(listening ? 'listening' : thinking ? 'thinking' : (timers.length || alarms.length) ? 'timer' : 'idle') }, [listening, thinking, timers.length, alarms.length])
   useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [])
   useEffect(() => {
     const handler = (event: Event) => { event.preventDefault(); setInstallPrompt(event) }
