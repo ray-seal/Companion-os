@@ -73,6 +73,7 @@ export default function App() {
   const [chat, setChat] = useState<ChatMessage[]>(readChat)
   const [personality, setPersonality] = useState<Personality>(starterPersonality)
   const chatEnd = useRef<HTMLDivElement>(null)
+  const draftInput = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => { localStorage.setItem('clive-profile', JSON.stringify(profile)) }, [profile])
   useEffect(() => { memoryRequest('personality_get').then(data => { if (data.profile) setPersonality({ ...starterPersonality, ...data.profile, interests: data.profile.interests || {}, traits: { ...starterPersonality.traits, ...(data.profile.traits || {}) }, favourites: { ...starterPersonality.favourites, ...(data.profile.favourites || {}) }, habits: data.profile.habits || [], memories: data.profile.memories || [] }) }).catch(() => {}) }, [])
@@ -116,6 +117,12 @@ export default function App() {
     return () => window.clearInterval(timer)
   }, [lastInteraction, mood])
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [chat])
+  useEffect(() => {
+    const input = draftInput.current
+    if (!input) return
+    input.style.height = 'auto'
+    input.style.height = `${Math.min(input.scrollHeight, 128)}px`
+  }, [draft])
 
   function speak(text: string) {
     if (!('speechSynthesis' in window)) { setMessage("This browser doesn't have speech enabled. We'll find another way."); return }
@@ -308,7 +315,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           </> : <div className="chat-panel">
             <div className="chat-heading"><span><MessageCircle size={15}/> A little chat</span><div className="chat-tools"><button onClick={clearChat} title="Clear this conversation"><RotateCcw size={14}/> Clear</button><button onClick={()=>setSpeakReplies(v=>!v)} aria-label="Toggle spoken replies">{speakReplies ? <Volume2 size={17}/> : <VolumeX size={17}/>} {speakReplies ? 'Voice on' : 'Voice off'}</button></div></div>
             <div className="chat-log">{chat.map(item=><div key={item.id} className={`chat-bubble ${item.role}`}><small>{item.role === 'you' ? 'YOU' : 'CLIVE'}</small><p>{item.text}</p>{item.role === 'clive' && <button className="replay" onClick={()=>speak(item.text)} aria-label="Read this reply aloud"><Volume2 size={14}/> Read aloud</button>}</div>)}{thinking && <div className="chat-bubble clive thinking-bubble"><small>CLIVE</small><p>Thinking<span className="thinking-dots">...</span></p></div>}<div ref={chatEnd}/></div>
-            <form className="chat-compose" onSubmit={e=>{e.preventDefault();if(listening) recognition.current?.stop();sendMessage()}}><button type="button" className={listening ? 'mic-button listening' : 'mic-button'} onClick={toggleListening} disabled={!voiceSupported} aria-label={listening ? 'Stop listening' : 'Speak to CLIVE'} title={voiceSupported ? 'Speak to CLIVE' : 'Speech recognition is not supported in this browser'}><Mic size={17}/></button><textarea rows={2} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();if(!thinking&&draft.trim())sendMessage()}}} placeholder={listening ? "I'm listening..." : "Ask me something..."} aria-label="Your message" /><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message"><Send size={17}/></button></form>
+            <form className="chat-compose" onSubmit={e=>{e.preventDefault();if(listening) recognition.current?.stop();sendMessage()}}><button type="button" className={listening ? 'mic-button listening' : 'mic-button'} onClick={toggleListening} disabled={!voiceSupported} aria-label={listening ? 'Stop listening' : 'Speak to CLIVE'} title={voiceSupported ? 'Speak to CLIVE' : 'Speech recognition is not supported in this browser'}><Mic size={17}/></button><textarea ref={draftInput} rows={2} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();if(!thinking&&draft.trim())sendMessage()}}} placeholder={listening ? "I'm listening..." : "Ask me something..."} aria-label="Your message" /><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message"><Send size={17}/></button></form>
             <div className="chat-foot"><span>{listening ? 'Listening... tap the mic to finish' : voiceSupported ? "Mic to speak · Ask weather or 'search for…'" : 'Voice input unavailable in this browser'}</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
           </div>}
         </section>
