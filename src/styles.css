@@ -150,3 +150,19 @@ footer{height:38px;padding:0 24px;color:#52657d;display:flex;justify-content:spa
 .flat-scroll-hint{text-align:center;color:#7895aa;font-size:9px;padding:7px 0 2px}
 .flat-controls button.active{border-color:#58dce9;color:#a9f2f2;background:#123b46}
 @media(max-width:520px){.flat-room{height:210px}.flat-room .flat-sofa{width:125px}.flat-room .flat-kitchen{width:125px}.flat-room .flat-window{width:88px;height:75px}.flat-room .flat-shelf{width:100px}.favourite-mug{right:25%;bottom:75px}}
+
+
+/* CLIVE status antenna and expressive digital face */
+.antenna i{transition:background .2s,box-shadow .2s}
+.antenna-listening i{background:#ff536b!important;box-shadow:0 0 15px #ff536b,0 0 30px #ff536b99!important}
+.antenna-timer i{background:#ffd45c!important;box-shadow:0 0 15px #ffd45c,0 0 30px #ffd45c99!important}
+.antenna-thinking i{background:#a58cff!important;box-shadow:0 0 15px #a58cff,0 0 30px #a58cff99!important}
+.antenna-idle i{background:#65eaf4}
+.face-clock,.face-timer{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#72f4ff;font:700 27px 'DM Mono',monospace;letter-spacing:.04em;text-shadow:0 0 9px #55eaf4,0 0 20px #55eaf488}
+.face-timer{font-size:25px;letter-spacing:.08em}
+.bot-display-clock .mouth,.bot-display-timer .mouth{opacity:0}
+.bot-amused .eye:first-child{transform:scaleY(.72)}.bot-amused .mouth{width:26px;height:10px;border-bottom:3px solid #65eaf4;border-radius:0 0 50% 50%}
+.bot-thoughtful .eye:first-child{transform:translateY(-3px) scaleY(.75)}.bot-thoughtful .mouth{width:10px;height:10px;border:2px solid #65eaf4;border-radius:50%}
+.bot-concerned .eye{transform:scaleY(.75)}.bot-concerned .mouth{width:22px;height:7px;border-top:2px solid #65eaf4;border-radius:50%}
+.bot-excited .eye{transform:scale(1.2)}.bot-excited .mouth{width:19px;height:13px;border:2px solid #65eaf4;border-radius:50%}
+.bot-calm .eye{transform:scaleY(.65)}.bot-calm .mouth{width:22px;height:7px;border-bottom:2px solid #65eaf4;border-radius:50%}
