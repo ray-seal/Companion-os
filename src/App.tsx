@@ -34,7 +34,7 @@ function conversationalMood(question: string, answer: string): Mood {
 }
 function isWeatherRequest(question: string): boolean {
   const q = question.trim()
-  return /^(?:(?:hey\s+)?(?:what(?:'s| is)\s+(?:the\s+)?weather\b|how(?:'s| is)\s+the\s+weather\b|(?:can you|could you|please)\s+(?:check|get|tell me)\s+(?:the\s+)?weather\b|(?:check|get|show me|give me)\s+(?:the\s+)?(?:weather|forecast)\b|what(?:'s| is)\s+(?:the\s+)?forecast\b|(?:will|is|was|has|does|did)\s+it\s+(?:rain|snow|be sunny|be windy)\b|is it\s+(?:raining|snowing|sunny|cloudy|windy)\b|what(?:'s| is)\s+the\s+temperature\s+outside\b|(?:weather|forecast)\s+(?:today|tonight|tomorrow|this weekend)\b)/i.test(q)
+  return /^(?:(?:hey\\s+)?(?:what(?:'s| is)\\s+(?:the\\s+)?weather\\b|how(?:'s| is)\\s+the\\s+weather\\b|(?:can you|could you|please)\\s+(?:check|get|tell me)\\s+(?:the\\s+)?weather\\b|(?:check|get|show me|give me)\\s+(?:the\\s+)?(?:weather|forecast)\\b|what(?:'s| is)\\s+(?:the\\s+)?forecast\\b|(?:will|is|was|has|does|did)\\s+it\\s+(?:going to\\s+)?(?:rain|snow|be sunny|be windy)\\b|is it\\s+(?:raining|snowing|sunny|cloudy|windy)\\b|what(?:'s| is)\\s+the\\s+temperature\\s+outside\\b|(?:weather|forecast)\\s+(?:(?:in|for)\\s+[a-z][a-z -]*|today|tonight|tomorrow|this weekend)\\b)/i.test(q)
 }
 function localReply(question: string): string {
   const q = question.toLowerCase()
