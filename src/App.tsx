@@ -278,8 +278,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     let answer = ''
     try {
       const q = question.toLowerCase()
-      const durationMatch = question.match(/(?:set|start|create)?\s*(?:a\s+)?timer\s+(?:for\s+)?(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i)
-      const reminderMatch = question.match(/remind me in\s+(\d+)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\s+to\s+(.+)/i)
+      const durationMatch = question.match(/(?:set|start|create)?\s*(?:a\s+)?timer\s+(?:for\s+)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|forty-five|sixty)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i)
+      const reminderMatch = question.match(/remind me in\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|fifteen|twenty|thirty|forty|forty-five|sixty)\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\s+to\s+(.+)/i)
       const alarmMatch = question.match(/(?:set|create) (?:an? )?alarm (?:for|at) (\d{1,2})(?::(\d{2}))?(?:\s*(am|pm))?(?:\s+(today|tomorrow))?/i)
       const timeQuestion = /^(?:clive[, ]*)?(?:what(?:'s| is) the time|what time is it|tell me the time|show me the time|what(?:'s| is) today's date|what day is it)\??$/i.test(question.trim())
       const saveMatch=question.match(/make a note for\s+(.+?)\s+that\s+(.+)/i) || question.match(/(?:remember|note down|save this)\s+(?:for|under)\s+([^:,.]+)[:,]?\s*(.+)/i)
