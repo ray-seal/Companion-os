@@ -268,9 +268,17 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     let answer = ''
     try {
       const q = question.toLowerCase()
+      const durationMatch = question.match(/(?:set|start|create)?\\s*(?:a\\s+)?timer\\s+(?:for\\s+)?(\\d+)\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)/i)
+      const reminderMatch = question.match(/remind me in\\s+(\\d+)\\s*(seconds?|secs?|minutes?|mins?|hours?|hrs?)\\s+to\\s+(.+)/i)
+      const timeQuestion = /^(?:clive[, ]*)?(?:what(?:'s| is) the time|what time is it|tell me the time|show me the time|what(?:'s| is) today's date|what day is it)\\??$/i.test(question.trim())
       const saveMatch=question.match(/make a note for\s+(.+?)\s+that\s+(.+)/i) || question.match(/(?:remember|note down|save this)\s+(?:for|under)\s+([^:,.]+)[:,]?\s*(.+)/i)
       const recallMatch=question.match(/(?:what (?:was|did) i (?:want|plan|intend) to|what was i going to|remind me what).*?(?:with|for|about)\s+([a-z0-9 -]+)/i)
-      if(saveMatch){const project=saveMatch[1].trim(),note=saveMatch[2].trim();await memoryRequest('save',{project,note});answer=`Right, I've tucked that away under ${project}: ${note}`;setDashboard(true);setPanel('notes')}
+      if (timeQuestion) { setDisplayMode('clock'); const stamp = new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date()); answer = "It's " + stamp + " here in the UK." }
+      else if (reminderMatch) { const n=Number(reminderMatch[1]),u=reminderMatch[2].toLowerCase(),ms=n*(u.startsWith('sec')?1000:u.startsWith('hour')||u.startsWith('hr')?3600000:60000),label=reminderMatch[3].trim(); setAlarms(xs=>[...xs,{id:Date.now(),label,dueAt:Date.now()+ms}]); answer="Right, I'll remind you to "+label+" in "+n+" "+u+"."; }
+      else if (durationMatch) { const n=Number(durationMatch[1]),u=durationMatch[2].toLowerCase(),ms=n*(u.startsWith('sec')?1000:u.startsWith('hour')||u.startsWith('hr')?3600000:60000); setTimers(xs=>[...xs,{id:Date.now(),label:'Timer',dueAt:Date.now()+ms}]); setDisplayMode('timer'); answer="Timer set for "+n+" "+u+". I'll let you know when it's finished."; }
+      else if (/how long.*(left|remaining)|time left on (?:my )?timer/i.test(question)) { const next=[...timers,...alarms].sort((x,y)=>x.dueAt-y.dueAt)[0]; if(next){const s=Math.max(0,Math.ceil((next.dueAt-Date.now())/1000)),m=Math.floor(s/60),r=s%60;setDisplayMode('timer');answer=next.label+": "+(m?m+" minute"+(m===1?"":"s")+" and ":"")+r+" seconds remaining.";}else answer="You haven't got any timers or reminders running."; }
+      else if (/cancel.*timer|stop.*timer/i.test(question)) { setTimers([]); answer="All right, I've cancelled your running timers."; }
+      else if(saveMatch){const project=saveMatch[1].trim(),note=saveMatch[2].trim();await memoryRequest('save',{project,note});answer=`Right, I've tucked that away under ${project}: ${note}`;setDashboard(true);setPanel('notes')}
       else if(recallMatch||/\b(show|list) my notes\b/i.test(question)){const project=(recallMatch?.[1]?.trim()||'').replace(/\s+(again|please|then)$/i,'').trim();const data=await memoryRequest('list',{project});answer=data.notes.length?`Here's what I've got saved${project?` for ${project}`:''}:\n\n`+data.notes.map((n:any)=>`• ${n.project}: ${n.note}`).join('\n'):`I've got no notes saved${project?` for ${project}`:''} yet.`;setNotes(data.notes);setDashboard(true);setPanel('notes')}
       else if (isWeatherRequest(question)) {
         answer = await fetchWeather()
