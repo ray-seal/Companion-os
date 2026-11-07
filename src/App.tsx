@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search, StickyNote, X, Plus, RefreshCw } from 'lucide-react'
 
-type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening'
+type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening' | 'amused' | 'thoughtful' | 'concerned' | 'excited' | 'calm'
 type Profile = { interactions: number; rapport: number; kindness: number; sarcasm: number }
 type ChatMessage = { id: number; role: 'you' | 'clive'; text: string }
 type Personality = { interests: Record<string, number>; traits: { curiosity: number; sarcasm: number; sentimentality: number }; favourites: { possession: string; activity: string; room: string }; habits: string[]; memories: string[] }
