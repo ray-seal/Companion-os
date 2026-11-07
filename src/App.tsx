@@ -147,7 +147,7 @@ export default function App() {
     return () => window.clearInterval(id)
   }, [timers, alarms])
   useEffect(() => {
-    if (displayMode === 'clock') { const id = window.setTimeout(() => setDisplayMode('normal'), 6000); return () => window.clearTimeout(id) }
+    if (displayMode === 'clock') { const id = window.setTimeout(() => setDisplayMode(timers.length || alarms.length ? 'timer' : 'normal'), 6000); return () => window.clearTimeout(id) }
   }, [displayMode])
   useEffect(() => { setAntennaStatus(listening ? 'listening' : thinking ? 'thinking' : (timers.length || alarms.length) ? 'timer' : 'idle') }, [listening, thinking, timers.length, alarms.length])
   useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel() }, [])
