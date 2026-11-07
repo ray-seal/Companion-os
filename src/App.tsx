@@ -342,10 +342,10 @@ Forecast time: ${data.current.time} (${data.timezone}).`
       {!admin ? (
         <section className="stage">
           <div className="ambient ambient-one" /><div className="ambient ambient-two" />
-          <button className={`bot bot-${mood}`} onClick={touchFace} aria-label="Tap CLIVE to interact">
-            <div className="antenna"><i /></div>
+          <button className={`bot bot-${mood} bot-display-${displayMode}`} onClick={touchFace} aria-label="Tap CLIVE to interact">
+            <div className={`antenna antenna-${antennaStatus}`}><i /></div>
             <div className="head"><div className="face-glass">
-              <div className="eyes"><span className="eye"><i /></span><span className="eye"><i /></span></div>
+              {displayMode === 'clock' ? <div className="face-clock">{new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',hour:'2-digit',minute:'2-digit',hour12:false}).format(clockNow)}</div> : displayMode === 'timer' ? <div className="face-timer">{(() => { const next=[...timers,...alarms].sort((x,y)=>x.dueAt-y.dueAt)[0]; if(!next) return 'DONE'; const s=Math.max(0,Math.ceil((next.dueAt-Date.now())/1000)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); })()}</div> : <div className="eyes"><span className="eye"><i /></span><span className="eye"><i /></span></div>}
               <div className="mouth" /><div className="cheek cheek-left" /><div className="cheek cheek-right" />
             </div><div className="chin-light" /></div>
             <div className="body-base"><span /><span /><span /></div>
