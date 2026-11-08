@@ -411,7 +411,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
             <article><Smile /><strong>{personality.traits?.curiosity ? 'Curious' : 'Getting acquainted'}</strong><small>Character</small></article>
           </div>
           <h3>CLIVE's voice</h3>
-          <CliveVoiceSetup />
+          <CliveVoiceSetup mode="status" />
           <h3>Local memory</h3>
           <div className="voice-panel"><div className="voice-copy"><strong>This device only</strong><small>Chat history, saved notes and CLIVE's local personality profile stay in this browser. Account sync is being worked on separately.</small></div></div>
           <div className="rapport-panel"><div className="rapport-top"><span>What CLIVE is getting into</span><strong>{Object.keys(personality.interests || {}).length} interests</strong></div><p>{Object.entries(personality.interests || {}).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([name,score])=>`${name} ${Math.round(score*100)}%`).join(' · ') || 'He is still getting to know you. Chat about the things you enjoy.'}</p><small>CLIVE only keeps notes when you explicitly save them.</small></div>
