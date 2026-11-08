@@ -29,7 +29,7 @@ self.onmessage = async (event: MessageEvent) => {
       const result = await tts.synthesize(String(text || ''))
       const samples = result.samples
       const audioBuffer = samples.slice().buffer as ArrayBuffer
-      self.postMessage({ type: 'audio', id, samples: audioBuffer, sampleRateHz: result.sampleRateHz }, [audioBuffer])
+      ;(self as unknown as { postMessage(message: unknown, transfer?: Transferable[]): void }).postMessage({ type: 'audio', id, samples: audioBuffer, sampleRateHz: result.sampleRateHz }, [audioBuffer])
     }
   } catch (error) {
     self.postMessage({ type: 'error', id, message: error instanceof Error ? error.message : String(error) })
