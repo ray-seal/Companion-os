@@ -23,6 +23,16 @@ const lines: Record<Mood, string[]> = {
   excited: ["Now we're talking!", "That's got my little lights flashing."],
   calm: ["Steady as she goes.", "No hurry. We've got time."]
 }
+function chooseCliveVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined {
+  const english = voices.filter(v => /^en(?:-|$)/i.test(v.lang))
+  const british = english.filter(v => /^en-gb(?:-|$)/i.test(v.lang))
+  const maleNames = /\b(male|daniel|arthur|george|oliver|ryan|alfie|james|thomas|lee|guy|fred|liam|rishi)\b/i
+  const femaleNames = /\b(female|woman|susan|kate|serena|hazel|sonia|amy|libby|moira|samantha|victoria|karen|zira)\b/i
+  const likelyMale = (list: SpeechSynthesisVoice[]) => list.find(v => maleNames.test(v.name) && !femaleNames.test(v.name))
+  return likelyMale(british) || british.find(v => v.default) || british[0]
+    || likelyMale(english) || english.find(v => v.default) || english[0]
+}
+
 function readProfile(): Profile {
   try { return { ...initialProfile, ...JSON.parse(localStorage.getItem('clive-profile') || '{}') } }
   catch { return initialProfile }
@@ -90,7 +100,6 @@ export default function App() {
   const [draft, setDraft] = useState('')
   const [speakReplies, setSpeakReplies] = useState(true)
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
-  const [selectedVoice, setSelectedVoice] = useState(() => localStorage.getItem('clive-voice') || '')
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
   const [thinking, setThinking] = useState(false)
@@ -114,7 +123,6 @@ export default function App() {
     window.speechSynthesis.addEventListener('voiceschanged', loadVoices)
     return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices)
   }, [])
-  useEffect(() => { if (selectedVoice) localStorage.setItem('clive-voice', selectedVoice) }, [selectedVoice])
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) return
@@ -148,7 +156,7 @@ export default function App() {
         setMessage(spoken); setMood('surprised'); setDisplayMode('timer')
         setTimers(current => current.filter(item => item.dueAt > now))
         setAlarms(current => current.filter(item => item.dueAt > now))
-        if ('speechSynthesis' in window) { window.speechSynthesis.cancel(); window.speechSynthesis.speak(new SpeechSynthesisUtterance(spoken)) }
+        if ('speechSynthesis' in window) speak(spoken)
         if ('Notification' in window && Notification.permission === 'granted') new Notification('CLIVE', { body: spoken })
       }
     }
@@ -198,14 +206,8 @@ export default function App() {
     }
     utterance.rate = voiceStyle[mood].rate
     utterance.pitch = voiceStyle[mood].pitch
-    const voices = window.speechSynthesis.getVoices()
-    const preferred = voices.find(v => v.voiceURI === selectedVoice)
-    const britishVoices = voices.filter(v => v.lang.toLowerCase().startsWith('en-gb'))
-    const maleHints = /\b(male|daniel|arthur|george|oliver|ryan|alfie|james|thomas|lee|guy|fred)\b/i
-    const femaleHints = /\b(female|woman|susan|kate|serena|hazel|sonia|amy|libby|moira)\b/i
-    const likelyMale = britishVoices.find(v => maleHints.test(v.name) && !femaleHints.test(v.name))
-    const british = preferred || likelyMale || britishVoices[0] || voices.find(v => v.lang.toLowerCase().startsWith('en'))
-    if (british) utterance.voice = british
+    const voice = chooseCliveVoice(window.speechSynthesis.getVoices())
+    if (voice) utterance.voice = voice
     window.speechSynthesis.speak(utterance)
   }
   function react(next: Mood, custom?: string) {
@@ -364,7 +366,6 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     if (speakReplies) window.setTimeout(() => speak(answer), 180)
   }
   const voiceChoices = availableVoices.filter(v => v.lang.toLowerCase().startsWith('en-gb'))
-  const selectedVoiceName = voiceChoices.find(v => v.voiceURI === selectedVoice)?.name
   return (
     <main className="shell">
       <header className="topbar">
@@ -408,13 +409,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           </div>
           <h3>CLIVE's voice</h3>
           <div className="voice-panel">
-            <div className="voice-copy"><strong>A northern sort of chap</strong><small>Choose a British English voice installed on this device. The available voices depend on your phone or browser.</small></div>
-            <select aria-label="Choose CLIVE's voice" value={selectedVoice} onChange={e=>setSelectedVoice(e.target.value)}>
-              <option value="">Automatic · best available British voice</option>
-              {voiceChoices.map(v=><option key={v.voiceURI} value={v.voiceURI}>{v.name} · {v.lang}</option>)}
-            </select>
-            <div className="voice-actions"><span>{selectedVoiceName || 'Automatic selection'}</span></div>
-            {!voiceChoices.length && <small className="voice-help">No British voices have appeared yet. Your device may still be loading its speech voices.</small>}
+            <div className="voice-copy"><strong>CLIVE's voice · automatic</strong><small>CLIVE picks the best available English voice automatically, preferring a British male voice where the device provides one. No account, paid service or extra voice download is required.</small></div>
+            <div className="voice-actions"><span>{availableVoices.length ? 'Voice ready on this device' : 'Waiting for the device speech engine'}</span></div>
           </div>
           <h3>Local memory</h3>
           <div className="voice-panel"><div className="voice-copy"><strong>This device only</strong><small>Chat history, saved notes and CLIVE's local personality profile stay in this browser. Account sync is being worked on separately.</small></div></div>
