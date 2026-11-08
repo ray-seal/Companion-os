@@ -28,7 +28,8 @@ self.onmessage = async (event: MessageEvent) => {
     } else if (type === 'speak' && tts) {
       const result = await tts.synthesize(String(text || ''))
       const samples = result.samples
-      self.postMessage({ type: 'audio', id, samples: samples.buffer, sampleRateHz: result.sampleRateHz }, [samples.buffer])
+      const audioBuffer = samples.slice().buffer as ArrayBuffer
+      self.postMessage({ type: 'audio', id, samples: audioBuffer, sampleRateHz: result.sampleRateHz }, [audioBuffer])
     }
   } catch (error) {
     self.postMessage({ type: 'error', id, message: error instanceof Error ? error.message : String(error) })
