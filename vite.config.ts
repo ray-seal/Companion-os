@@ -19,7 +19,17 @@ export default defineConfig({
         start_url: '/',
         icons: [{ src: '/clive.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }]
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] }
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        runtimeCaching: [{
+          urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/npm\/@mediapipe\/tasks-audio@1\.2\.2\/wasm\//,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'clive-mediapipe-wasm',
+            cacheableResponse: { statuses: [0, 200] }
+          }
+        }]
+      }
     })
   ],
   server: { host: '0.0.0.0' }
