@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import CliveVoiceSetup from './CliveVoiceSetup'
+import { speakWithCliveVoice } from './cliveVoice'
 import { Settings2, Heart, Sparkles, Smile, RotateCcw, Volume2, VolumeX, Send, MessageCircle, Mic, CloudSun, Search, StickyNote, X, Plus, RefreshCw } from 'lucide-react'
 
 type Mood = 'happy' | 'curious' | 'sleepy' | 'surprised' | 'confused' | 'cheeky' | 'listening' | 'amused' | 'thoughtful' | 'concerned' | 'excited' | 'calm'
@@ -193,7 +195,8 @@ export default function App() {
     input.style.height = `${Math.min(input.scrollHeight, 128)}px`
   }, [draft])
 
-  function speak(text: string) {
+  async function speak(text: string) {
+    if (await speakWithCliveVoice(text)) return
     if (!('speechSynthesis' in window)) { setMessage("This browser doesn't have speech enabled. We'll find another way."); return }
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(text)
@@ -374,6 +377,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           <button className="icon-button" aria-label="Open settings" onClick={() => { setAdmin(v => !v); setChatOpen(false) }}><Settings2 size={19} /></button>
         </div>
       </header>
+      <CliveVoiceSetup />
       {!admin ? (
         <section className="stage">
           <div className="ambient ambient-one" /><div className="ambient ambient-two" />
@@ -407,10 +411,7 @@ Forecast time: ${data.current.time} (${data.timezone}).`
             <article><Smile /><strong>{personality.traits?.curiosity ? 'Curious' : 'Getting acquainted'}</strong><small>Character</small></article>
           </div>
           <h3>CLIVE's voice</h3>
-          <div className="voice-panel">
-            <div className="voice-copy"><strong>CLIVE's voice · automatic</strong><small>CLIVE picks the best available English voice automatically, preferring a British male voice where the device provides one. No account, paid service or extra voice download is required.</small></div>
-            <div className="voice-actions"><span>{availableVoices.length ? 'Voice ready on this device' : 'Waiting for the device speech engine'}</span></div>
-          </div>
+          <CliveVoiceSetup />
           <h3>Local memory</h3>
           <div className="voice-panel"><div className="voice-copy"><strong>This device only</strong><small>Chat history, saved notes and CLIVE's local personality profile stay in this browser. Account sync is being worked on separately.</small></div></div>
           <div className="rapport-panel"><div className="rapport-top"><span>What CLIVE is getting into</span><strong>{Object.keys(personality.interests || {}).length} interests</strong></div><p>{Object.entries(personality.interests || {}).sort((x,y)=>y[1]-x[1]).slice(0,5).map(([name,score])=>`${name} ${Math.round(score*100)}%`).join(' · ') || 'He is still getting to know you. Chat about the things you enjoy.'}</p><small>CLIVE only keeps notes when you explicitly save them.</small></div>
