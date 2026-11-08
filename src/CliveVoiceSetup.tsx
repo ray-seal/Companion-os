@@ -9,19 +9,23 @@ export default function CliveVoiceSetup({ mode = 'setup' }: { mode?: 'setup' | '
   const [error, setError] = useState('')
   useEffect(() => {
     let active = true
+    const onOpen = () => setOpen(true)
+    if (mode === 'setup') window.addEventListener('clive-open-voice-setup', onOpen)
     ;(async () => {
       const installed = await hasCliveVoicePack()
       if (!active) return
       if (installed) {
-        try { await initialiseCliveVoice(); if (active) setStatus('ready') }
-        catch { if (active) setStatus('error') }
+        if (mode === 'setup') {
+          try { await initialiseCliveVoice(); if (active) setStatus('ready') }
+          catch { if (active) setStatus('error') }
+        } else setStatus('ready')
       } else {
         setStatus('missing')
-        if (!localStorage.getItem('clive-voice-setup-choice')) setOpen(true)
+        if (mode === 'setup' && !localStorage.getItem('clive-voice-setup-choice')) setOpen(true)
       }
     })()
-    return () => { active = false }
-  }, [])
+    return () => { active = false; window.removeEventListener('clive-open-voice-setup', onOpen) }
+  }, [mode])
   async function install() {
     setStatus('downloading'); setProgress(0); setError('')
     try {
@@ -56,7 +60,7 @@ export default function CliveVoiceSetup({ mode = 'setup' }: { mode?: 'setup' | '
     </div>}
     {mode === 'status' && <div className="voice-pack-status">
       <div><strong>CLIVE voice pack</strong><small>{status === 'ready' ? 'Installed on this device · British male voice' : status === 'downloading' ? 'Downloading voice pack…' : status === 'error' ? 'Could not load voice pack' : 'Optional · About 295 MB'}</small></div>
-      {status === 'ready' ? <button onClick={() => void speakWithCliveVoice("Hello there. George here, at your service.")}><Volume2 size={16}/> Test voice</button> : <button onClick={() => setOpen(true)}><Download size={16}/> {status === 'downloading' ? 'Downloading' : 'Set up'}</button>}
+      {status === 'ready' ? <button onClick={() => void speakWithCliveVoice("Hello there. George here, at your service.")}><Volume2 size={16}/> Test voice</button> : <button onClick={() => window.dispatchEvent(new Event('clive-open-voice-setup'))}><Download size={16}/> {status === 'downloading' ? 'Downloading' : 'Set up'}</button>}
       {status === 'ready' && <CheckCircle2 size={17} className="voice-pack-check"/>}
     </div>}
   </>
