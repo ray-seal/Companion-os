@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Download, CheckCircle2, X, Volume2, Loader2 } from 'lucide-react'
 import { downloadCliveVoicePack, hasCliveVoicePack, initialiseCliveVoice, speakWithCliveVoice } from './cliveVoice'
 
-export default function CliveVoiceSetup() {
+export default function CliveVoiceSetup({ mode = 'setup' }: { mode?: 'setup' | 'status' }) {
   const [open, setOpen] = useState(false)
   const [status, setStatus] = useState<'checking'|'missing'|'ready'|'downloading'|'error'>('checking')
   const [progress, setProgress] = useState(0)
@@ -38,7 +38,7 @@ export default function CliveVoiceSetup() {
     localStorage.setItem('clive-voice-setup-choice', 'later')
   }
   return <>
-    {open && <div className="voice-setup-backdrop" role="dialog" aria-modal="true" aria-labelledby="voice-setup-title">
+    {mode === 'setup' && open && <div className="voice-setup-backdrop" role="dialog" aria-modal="true" aria-labelledby="voice-setup-title">
       <div className="voice-setup-card">
         <button className="voice-setup-close" onClick={dismiss} aria-label="Not now"><X size={18}/></button>
         <div className="voice-setup-icon"><Volume2 size={25}/></div>
@@ -54,10 +54,10 @@ export default function CliveVoiceSetup() {
         <small>You can install it later from Settings. CLIVE will keep using the device voice until then.</small>
       </div>
     </div>}
-    <div className="voice-pack-status">
+    {mode === 'status' && <div className="voice-pack-status">
       <div><strong>CLIVE voice pack</strong><small>{status === 'ready' ? 'Installed on this device · British male voice' : status === 'downloading' ? 'Downloading voice pack…' : status === 'error' ? 'Could not load voice pack' : 'Optional · About 295 MB'}</small></div>
       {status === 'ready' ? <button onClick={() => void speakWithCliveVoice("Hello there. George here, at your service.")}><Volume2 size={16}/> Test voice</button> : <button onClick={() => setOpen(true)}><Download size={16}/> {status === 'downloading' ? 'Downloading' : 'Set up'}</button>}
       {status === 'ready' && <CheckCircle2 size={17} className="voice-pack-check"/>}
-    </div>
+    </div>}
   </>
 }
