@@ -365,7 +365,6 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     react(nextMood, nextMood === 'happy' ? "Right, that's my contribution. What next?" : undefined)
     if (speakReplies) window.setTimeout(() => speak(answer), 180)
   }
-  const voiceChoices = availableVoices.filter(v => v.lang.toLowerCase().startsWith('en-gb'))
   return (
     <main className="shell">
       <header className="topbar">
