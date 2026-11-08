@@ -70,23 +70,31 @@ export async function initialiseCliveVoice(): Promise<boolean> {
   return true
 }
 export async function downloadCliveVoicePack(onProgress: (percent: number) => void): Promise<void> {
-  const response = await fetch(MODEL_URL)
-  if (!response.ok || !response.body) throw new Error('The voice pack download could not start. Please try again.')
-  const total = Number(response.headers.get('content-length')) || 295 * 1024 * 1024
-  const reader = response.body.getReader()
-  const chunks: Uint8Array[] = []
-  let received = 0
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    if (value) {
-      chunks.push(value)
-      received += value.length
-      onProgress(Math.min(99, Math.round(received / total * 100)))
+  // A previous attempt may have downloaded and stored the model successfully
+  // but failed while starting the speech engine. Reuse that local copy rather
+  // than making the user download another 295 MB.
+  let blob = await readModel()
+
+  if (!blob) {
+    const response = await fetch(MODEL_URL)
+    if (!response.ok || !response.body) throw new Error('The voice pack download could not start. Please try again.')
+    const total = Number(response.headers.get('content-length')) || 295 * 1024 * 1024
+    const reader = response.body.getReader()
+    const chunks: Uint8Array[] = []
+    let received = 0
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (value) {
+        chunks.push(value)
+        received += value.length
+        onProgress(Math.min(99, Math.round(received / total * 100)))
+      }
     }
+    blob = new Blob(chunks, { type: 'application/octet-stream' })
+    await saveModel(blob)
   }
-  const blob = new Blob(chunks, { type: 'application/octet-stream' })
-  await saveModel(blob)
+
   onProgress(100)
   await initialiseCliveVoice()
 }
