@@ -74,3 +74,10 @@ For local development, copy `.env.example` to `.env.local` and add your key ther
 - Ask CLIVE about the weather to request browser location permission and fetch current conditions plus today's forecast from Open-Meteo. Location coordinates are sent to the server only for that weather request and are not stored by this app.
 - Start a message with `search for ...` or `look up ...` to search Wikipedia and receive source links. This is a lightweight reference search, not a general-purpose web search engine.
 - The Gemini conversation endpoint remains separate and works once `GEMINI_API_KEY` is configured in Vercel.
+
+
+## Local wake-word listening and hardware detection
+
+CLIVE can use an optional Raspberry Pi service for local wake-word detection. It listens for "Hey Clive", "Hi Clive" and "Here Clive" using Vosk, then sends only the recognised request text to the existing chat API. It also reports whether a microphone and webcam device are present. The camera is detected but not yet used for vision.
+
+See [the Raspberry Pi listener setup guide](pi/README.md). Note that the Pi Zero W is ARMv6 and may not support a ready-made Vosk package; a Pi 3B or newer is recommended for always-on local speech recognition.
