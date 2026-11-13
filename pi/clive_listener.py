@@ -81,6 +81,10 @@ async def main(model_path: Path):
         finally:
             if state["client"] is websocket:
                 state["client"] = None
+                state["mode"] = "wake"
+                state["resume_mode"] = "wake"
+                wake_recognizer.Reset()
+                command_recognizer.Reset()
 
     print("Starting microphone stream…", flush=True)
     with sd.RawInputStream(
@@ -99,7 +103,7 @@ async def main(model_path: Path):
                     if wake_recognizer.AcceptWaveform(audio):
                         result = json.loads(wake_recognizer.Result())
                         phrase = (result.get("text") or "").lower().strip()
-                        if phrase in WAKE_PHRASES:
+                        if phrase in WAKE_PHRASES and state["client"] is not None:
                             state["mode"] = "paused"
                             state["resume_mode"] = "capture"
                             command_recognizer.Reset()
