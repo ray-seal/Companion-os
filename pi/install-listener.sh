@@ -33,7 +33,7 @@ fi
 cat > "$SERVICE_DIR/clive-listener.service" <<'UNIT'
 [Unit]
 Description=CLIVE local wake word and hardware listener
-After=sound.target
+After=default.target
 
 [Service]
 Type=simple
