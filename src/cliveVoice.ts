@@ -110,7 +110,10 @@ export async function speakWithCliveVoice(text: string): Promise<boolean> {
     const source = audioContext.createBufferSource()
     source.buffer = buffer
     source.connect(audioContext.destination)
-    source.start()
+    await new Promise<void>(resolve => {
+      source.onended = () => resolve()
+      source.start()
+    })
     return true
   } catch {
     return false
