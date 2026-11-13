@@ -104,6 +104,7 @@ export default function App() {
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([])
   const [listening, setListening] = useState(false)
   const [voiceSupported, setVoiceSupported] = useState(false)
+  const [localBridgeStatus, setLocalBridgeStatus] = useState('Looking for local voice hardware…')
   const [thinking, setThinking] = useState(false)
   const [displayMode, setDisplayMode] = useState<'normal' | 'clock' | 'timer'>('normal')
   const [clockNow, setClockNow] = useState(new Date())
@@ -111,12 +112,78 @@ export default function App() {
   const [alarms, setAlarms] = useState<Array<{id:number;label:string;dueAt:number}>>(() => { try { return JSON.parse(localStorage.getItem('clive-alarms') || '[]') } catch { return [] } })
   const [antennaStatus, setAntennaStatus] = useState<'idle'|'listening'|'timer'|'thinking'>('idle')
   const recognition = useRef<any>(null)
+  const localBridge = useRef<WebSocket | null>(null)
   const [chat, setChat] = useState<ChatMessage[]>(readChat)
   const [personality, setPersonality] = useState<Personality>(starterPersonality)
   const chatEnd = useRef<HTMLDivElement>(null)
   const draftInput = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => { localStorage.setItem('clive-profile', JSON.stringify(profile)) }, [profile])
+  useEffect(() => {
+    let active = true
+    let retryId: number | undefined
+    let socket: WebSocket | null = null
+
+    const connect = () => {
+      if (!active || (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING))) return
+      try {
+        socket = new WebSocket('ws://127.0.0.1:8765')
+        localBridge.current = socket
+        socket.onopen = () => {
+          if (!active) return
+          setVoiceSupported(true)
+          setLocalBridgeStatus('Local listener connected · checking microphone and camera…')
+        }
+        socket.onmessage = event => {
+          if (!active) return
+          let data: any
+          try { data = JSON.parse(event.data) } catch { return }
+          if (data.type === 'status') {
+            const mic = data.microphone ? 'Mic ready' : 'No microphone detected'
+            const camera = data.webcam ? 'Webcam ready' : 'No webcam detected'
+            setLocalBridgeStatus('Local listener · ' + mic + ' · ' + camera)
+          } else if (data.type === 'wake' || data.type === 'capture_started') {
+            setChatOpen(true)
+            setDashboard(false)
+            setDraft('')
+            setListening(true)
+            react('listening', "I'm listening.")
+            void speak("I'm listening")
+          } else if (data.type === 'transcript' && typeof data.text === 'string' && data.text.trim()) {
+            setListening(false)
+            void sendMessage(data.text.trim())
+          } else if (data.type === 'error') {
+            setListening(false)
+            setLocalBridgeStatus('Voice listener: ' + String(data.message || 'check the local service'))
+          }
+        }
+        socket.onclose = () => {
+          if (!active) return
+          if (localBridge.current === socket) localBridge.current = null
+          setLocalBridgeStatus('Local listener offline · manual mic may still work')
+          setVoiceSupported(!!recognition.current)
+        }
+        socket.onerror = () => {
+          if (active) setLocalBridgeStatus('Local listener not found · manual mic may still work')
+        }
+      } catch {
+        setLocalBridgeStatus('Local listener not found · manual mic may still work')
+      }
+    }
+
+    connect()
+    retryId = window.setInterval(connect, 5000)
+    return () => {
+      active = false
+      if (retryId !== undefined) window.clearInterval(retryId)
+      if (socket) {
+        socket.onclose = null
+        socket.close()
+      }
+      if (localBridge.current === socket) localBridge.current = null
+    }
+  }, [])
+
   useEffect(() => { memoryRequest('personality_get').then(data => { if (data.profile) setPersonality({ ...starterPersonality, ...data.profile, interests: data.profile.interests || {}, traits: { ...starterPersonality.traits, ...(data.profile.traits || {}) }, favourites: { ...starterPersonality.favourites, ...(data.profile.favourites || {}) }, habits: data.profile.habits || [], memories: data.profile.memories || [] }) }).catch(() => {}) }, [])
   useEffect(() => {
     if (!('speechSynthesis' in window)) return
@@ -196,22 +263,32 @@ export default function App() {
   }, [draft])
 
   async function speak(text: string) {
-    if (await speakWithCliveVoice(text)) return
-    if (!('speechSynthesis' in window)) { setMessage("This browser doesn't have speech enabled. We'll find another way."); return }
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
-    utterance.lang = 'en-GB'
-    const voiceStyle: Record<Mood, { rate: number; pitch: number }> = {
-      happy: { rate: 1.02, pitch: 1.02 }, curious: { rate: 0.98, pitch: 1.08 },
-      sleepy: { rate: 0.86, pitch: 0.88 }, surprised: { rate: 1.08, pitch: 1.12 },
-      confused: { rate: 0.93, pitch: 0.98 }, cheeky: { rate: 1.01, pitch: 0.94 },
-      listening: { rate: 0.96, pitch: 0.96 }, amused: { rate: 1.04, pitch: 1.05 }, thoughtful: { rate: 0.92, pitch: 1 }, concerned: { rate: 0.94, pitch: 1.02 }, excited: { rate: 1.1, pitch: 1.12 }, calm: { rate: 0.96, pitch: 0.98 }
+    const bridge = localBridge.current
+    if (bridge?.readyState === WebSocket.OPEN) bridge.send(JSON.stringify({ command: 'pause' }))
+    try {
+      if (await speakWithCliveVoice(text)) return
+      if (!('speechSynthesis' in window)) { setMessage("This browser doesn't have speech enabled. We'll find another way."); return }
+      window.speechSynthesis.cancel()
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = 'en-GB'
+      const voiceStyle: Record<Mood, { rate: number; pitch: number }> = {
+        happy: { rate: 1.02, pitch: 1.02 }, curious: { rate: 0.98, pitch: 1.08 },
+        sleepy: { rate: 0.86, pitch: 0.88 }, surprised: { rate: 1.08, pitch: 1.12 },
+        confused: { rate: 0.93, pitch: 0.98 }, cheeky: { rate: 1.01, pitch: 0.94 },
+        listening: { rate: 0.96, pitch: 0.96 }, amused: { rate: 1.04, pitch: 1.05 }, thoughtful: { rate: 0.92, pitch: 1 }, concerned: { rate: 0.94, pitch: 1.02 }, excited: { rate: 1.1, pitch: 1.12 }, calm: { rate: 0.96, pitch: 0.98 }
+      }
+      utterance.rate = voiceStyle[mood].rate
+      utterance.pitch = voiceStyle[mood].pitch
+      const voice = chooseCliveVoice(window.speechSynthesis.getVoices())
+      if (voice) utterance.voice = voice
+      await new Promise<void>(resolve => {
+        utterance.onend = () => resolve()
+        utterance.onerror = () => resolve()
+        window.speechSynthesis.speak(utterance)
+      })
+    } finally {
+      if (bridge?.readyState === WebSocket.OPEN) bridge.send(JSON.stringify({ command: 'resume' }))
     }
-    utterance.rate = voiceStyle[mood].rate
-    utterance.pitch = voiceStyle[mood].pitch
-    const voice = chooseCliveVoice(window.speechSynthesis.getVoices())
-    if (voice) utterance.voice = voice
-    window.speechSynthesis.speak(utterance)
   }
   function react(next: Mood, custom?: string) {
     setMood(next); setMessage(custom || lines[next][Math.floor(Math.random() * lines[next].length)])
@@ -219,7 +296,12 @@ export default function App() {
   }
   function touchFace() { setDashboard(true); setPanel('home'); react('curious', 'Control centre open. What are we poking at?') }
   function toggleListening() {
-    if (!recognition.current) { setMessage("This browser doesn't support speech recognition. You can still type to me."); return }
+    if (localBridge.current?.readyState === WebSocket.OPEN) {
+      setDraft('')
+      localBridge.current.send(JSON.stringify({ command: 'start_capture' }))
+      return
+    }
+    if (!recognition.current) { setMessage("I can't find a local listener or browser speech recognition. You can still type to me."); return }
     if (listening) { recognition.current.stop(); setListening(false); return }
     setDraft('')
     setListening(true)
@@ -287,8 +369,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
 ` + data.results.map((item: any, index: number) => `${index + 1}. ${item.title}\n${item.snippet}\n${item.url}`).join('\n\n') + '\n\nThis is a Wikipedia reference search, not a full web search engine.'
   }
 
-  async function sendMessage() {
-    const question = draft.trim()
+  async function sendMessage(spokenText?: string) {
+    const question = (spokenText ?? draft).trim()
     if (!question || thinking) return
     const history = [...chat, { id: Date.now(), role: 'you' as const, text: question }]
     setChat(history)
@@ -398,8 +480,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
           </> : <div className="chat-panel">
             <div className="chat-heading"><span><MessageCircle size={15}/> A little chat</span><div className="chat-tools"><button onClick={clearChat} title="Clear this conversation"><RotateCcw size={14}/> Clear</button><button onClick={()=>setSpeakReplies(v=>!v)} aria-label="Toggle spoken replies">{speakReplies ? <Volume2 size={17}/> : <VolumeX size={17}/>} {speakReplies ? 'Voice on' : 'Voice off'}</button></div></div>
             <div className="chat-log">{chat.map(item=><div key={item.id} className={`chat-bubble ${item.role}`}><small>{item.role === 'you' ? 'YOU' : 'CLIVE'}</small><p>{item.text}</p>{item.role === 'clive' && <button className="replay" onClick={()=>speak(item.text)} aria-label="Read this reply aloud"><Volume2 size={14}/> Read aloud</button>}</div>)}{thinking && <div className="chat-bubble clive thinking-bubble"><small>CLIVE</small><p>Thinking<span className="thinking-dots">...</span></p></div>}<div ref={chatEnd}/></div>
-            <form className="chat-compose" onSubmit={e=>{e.preventDefault();if(listening) recognition.current?.stop();sendMessage()}}><button type="button" className={listening ? 'mic-button listening' : 'mic-button'} onClick={toggleListening} disabled={!voiceSupported} aria-label={listening ? 'Stop listening' : 'Speak to CLIVE'} title={voiceSupported ? 'Speak to CLIVE' : 'Speech recognition is not supported in this browser'}><Mic size={17}/></button><textarea ref={draftInput} rows={2} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();if(!thinking&&draft.trim())sendMessage()}}} placeholder={listening ? "I'm listening..." : "Ask me something..."} aria-label="Your message" /><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message"><Send size={17}/></button></form>
-            <div className="chat-foot"><span>{listening ? 'Listening... tap the mic to finish' : voiceSupported ? "Mic to speak · Ask weather or 'search for…'" : 'Voice input unavailable in this browser'}</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
+            <form className="chat-compose" onSubmit={e=>{e.preventDefault();if(listening) recognition.current?.stop();sendMessage()}}><button type="button" className={listening ? 'mic-button listening' : 'mic-button'} onClick={toggleListening} disabled={!voiceSupported} aria-label={listening ? 'Stop listening' : 'Speak to CLIVE'} title={localBridge.current?.readyState === WebSocket.OPEN ? 'Speak to CLIVE using local wake-word listening' : voiceSupported ? 'Speak to CLIVE' : 'Speech recognition is not supported in this browser'}><Mic size={17}/></button><textarea ref={draftInput} rows={2} value={draft} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();if(!thinking&&draft.trim())sendMessage()}}} placeholder={listening ? "I'm listening..." : "Ask me something..."} aria-label="Your message" /><button type="submit" disabled={!draft.trim() || thinking} aria-label="Send message"><Send size={17}/></button></form>
+            <div className="chat-foot"><span>{listening ? 'Listening…' : localBridgeStatus || (voiceSupported ? "Mic to speak · Ask weather or 'search for…'" : 'Voice input unavailable')}</span><button onClick={()=>setChatOpen(false)}>Close chat</button></div>
           </div>}
         </section>
       ) : (
