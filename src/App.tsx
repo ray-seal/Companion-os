@@ -113,6 +113,7 @@ export default function App() {
   const [antennaStatus, setAntennaStatus] = useState<'idle'|'listening'|'timer'|'thinking'>('idle')
   const recognition = useRef<any>(null)
   const localBridge = useRef<WebSocket | null>(null)
+  const sendMessageRef = useRef<(text: string) => void>(() => {})
   const [chat, setChat] = useState<ChatMessage[]>(readChat)
   const [personality, setPersonality] = useState<Personality>(starterPersonality)
   const chatEnd = useRef<HTMLDivElement>(null)
@@ -151,7 +152,7 @@ export default function App() {
             void speak("I'm listening")
           } else if (data.type === 'transcript' && typeof data.text === 'string' && data.text.trim()) {
             setListening(false)
-            void sendMessage(data.text.trim())
+            sendMessageRef.current(data.text.trim())
           } else if (data.type === 'error') {
             setListening(false)
             setLocalBridgeStatus('Voice listener: ' + String(data.message || 'check the local service'))
@@ -450,6 +451,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
     react(nextMood, nextMood === 'happy' ? "Right, that's my contribution. What next?" : undefined)
     if (speakReplies) window.setTimeout(() => speak(answer), 180)
   }
+  sendMessageRef.current = (text: string) => { void sendMessage(text) }
+
   return (
     <main className="shell">
       <header className="topbar">
