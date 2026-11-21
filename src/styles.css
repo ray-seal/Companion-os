@@ -154,9 +154,12 @@ footer{height:38px;padding:0 24px;color:#52657d;display:flex;justify-content:spa
 
 /* CLIVE status antenna and expressive digital face */
 .antenna i{transition:background .2s,box-shadow .2s}
-.antenna-listening i{background:#ff536b!important;box-shadow:0 0 15px #ff536b,0 0 30px #ff536b99!important}
+.antenna-listening i{background:#ff536b!important;box-shadow:0 0 15px #ff536b,0 0 30px #ff536b99!important;animation:antennaRedPulse .8s ease-in-out infinite alternate}
 .antenna-timer i{background:#ffd45c!important;box-shadow:0 0 15px #ffd45c,0 0 30px #ffd45c99!important}
 .antenna-thinking i{background:#a58cff!important;box-shadow:0 0 15px #a58cff,0 0 30px #a58cff99!important}
+.antenna-speaking i{background:#4c9dff!important;box-shadow:0 0 15px #4c9dff,0 0 30px #4c9dff99!important;animation:antennaBluePulse .65s ease-in-out infinite alternate}
+@keyframes antennaRedPulse{from{opacity:.45;transform:scale(.78)}to{opacity:1;transform:scale(1.18)}}
+@keyframes antennaBluePulse{from{opacity:.4;transform:scale(.82)}to{opacity:1;transform:scale(1.2)}}
 .antenna-idle i{background:#65eaf4}
 .face-clock,.face-timer{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;color:#72f4ff;font:700 27px 'DM Mono',monospace;letter-spacing:.04em;text-shadow:0 0 9px #55eaf4,0 0 20px #55eaf488}
 .bot-display-clock .cheek,.bot-display-timer .cheek{opacity:0}
