@@ -17,7 +17,7 @@ from vosk import KaldiRecognizer, Model
 HOST = "127.0.0.1"
 PORT = 8765
 SAMPLE_RATE = 16000
-WAKE_PHRASES = ["hey clive", "hi clive", "here clive"]
+WAKE_PHRASES = ["clive"]
 
 
 def select_input_device():
@@ -147,7 +147,7 @@ async def main(model_path: Path):
                     if wake_recognizer.AcceptWaveform(audio):
                         result = json.loads(wake_recognizer.Result())
                         phrase = (result.get("text") or "").lower().strip()
-                        if phrase in WAKE_PHRASES and state["client"] is not None:
+                        if "clive" in phrase.split() and state["client"] is not None:
                             state["mode"] = "paused"
                             state["resume_mode"] = "capture"
                             command_recognizer.Reset()
