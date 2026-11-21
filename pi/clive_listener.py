@@ -5,6 +5,7 @@ import argparse
 import asyncio
 import glob
 import json
+import os
 import queue
 import sys
 from pathlib import Path
@@ -19,13 +20,51 @@ SAMPLE_RATE = 16000
 WAKE_PHRASES = ["hey clive", "hi clive", "here clive"]
 
 
-def device_status():
+def select_input_device():
+    """Prefer the USB webcam microphone, then fall back to the OS default input."""
     try:
-        microphone = sd.query_devices(kind="input") is not None
+        devices = sd.query_devices()
     except Exception:
-        microphone = False
+        return None, None
+
+    inputs = [(index, device) for index, device in enumerate(devices) if device.get("max_input_channels", 0) > 0]
+    if not inputs:
+        return None, None
+
+    requested = os.getenv("CLIVE_INPUT_DEVICE", "").strip()
+    if requested:
+        if requested.isdigit():
+            wanted = int(requested)
+            for index, device in inputs:
+                if index == wanted:
+                    return index, device.get("name", "Input device")
+        else:
+            for index, device in inputs:
+                if requested.lower() in device.get("name", "").lower():
+                    return index, device.get("name", "Input device")
+
+    preferred_words = ("webcam", "usb camera", "camera", "usb microphone", "usb audio")
+    for index, device in inputs:
+        name = device.get("name", "").lower()
+        if any(word in name for word in preferred_words):
+            return index, device.get("name", "USB microphone")
+
+    try:
+        default_index = sd.default.device[0]
+        for index, device in inputs:
+            if index == default_index:
+                return index, device.get("name", "Default microphone")
+    except Exception:
+        pass
+    index, device = inputs[0]
+    return index, device.get("name", "Input microphone")
+
+
+def device_status(input_device_name=None):
+    input_index, detected_name = select_input_device()
+    microphone = input_index is not None
     webcam = bool(glob.glob("/dev/video*"))
-    return {"microphone": microphone, "webcam": webcam}
+    return {"microphone": microphone, "microphone_name": input_device_name or detected_name, "webcam": webcam}
 
 
 async def main(model_path: Path):
@@ -37,6 +76,10 @@ async def main(model_path: Path):
     wake_recognizer = KaldiRecognizer(model, SAMPLE_RATE, json.dumps(WAKE_PHRASES))
     command_recognizer = KaldiRecognizer(model, SAMPLE_RATE)
     audio_queue = queue.Queue(maxsize=40)
+    input_device_index, input_device_name = select_input_device()
+    if input_device_index is None:
+        raise RuntimeError("No microphone input device found. Check the USB webcam microphone and run arecord -l.")
+    print(f"Using microphone: {input_device_name} (device {input_device_index})", flush=True)
     state = {"mode": "wake", "resume_mode": "wake", "client": None}
 
     def audio_callback(indata, frames, time_info, status):
@@ -57,7 +100,7 @@ async def main(model_path: Path):
 
     async def handler(websocket):
         state["client"] = websocket
-        await websocket.send(json.dumps({"type": "status", **device_status()}))
+        await websocket.send(json.dumps({"type": "status", **device_status(input_device_name)}))
         try:
             async for raw in websocket:
                 try:
@@ -92,6 +135,7 @@ async def main(model_path: Path):
         blocksize=4000,
         dtype="int16",
         channels=1,
+        device=input_device_index,
         callback=audio_callback,
     ):
         async with websockets.serve(handler, HOST, PORT, ping_interval=20, ping_timeout=20):
