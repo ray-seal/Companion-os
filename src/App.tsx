@@ -114,11 +114,12 @@ export default function App() {
   const [voiceSupported, setVoiceSupported] = useState(false)
   const [localBridgeStatus, setLocalBridgeStatus] = useState('Looking for local voice hardware…')
   const [thinking, setThinking] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
   const [displayMode, setDisplayMode] = useState<'normal' | 'clock' | 'timer'>('normal')
   const [clockNow, setClockNow] = useState(new Date())
   const [timers, setTimers] = useState<Array<{id:number;label:string;dueAt:number}>>(() => { try { return JSON.parse(localStorage.getItem('clive-timers') || '[]') } catch { return [] } })
   const [alarms, setAlarms] = useState<Array<{id:number;label:string;dueAt:number}>>(() => { try { return JSON.parse(localStorage.getItem('clive-alarms') || '[]') } catch { return [] } })
-  const [antennaStatus, setAntennaStatus] = useState<'idle'|'listening'|'timer'|'thinking'>('idle')
+  const [antennaStatus, setAntennaStatus] = useState<'idle'|'listening'|'timer'|'thinking'|'speaking'>('idle')
   const recognition = useRef<any>(null)
   const localBridge = useRef<WebSocket | null>(null)
   const sendMessageRef = useRef<(text: string) => void>(() => {})
@@ -248,8 +249,8 @@ export default function App() {
     if (displayMode === 'clock') { const id = window.setTimeout(() => setDisplayMode(timers.length || alarms.length ? 'timer' : 'normal'), 6000); return () => window.clearTimeout(id) }
   }, [displayMode])
   useEffect(() => {
-    setAntennaStatus(listening ? 'listening' : thinking ? 'thinking' : (timers.length || alarms.length) ? 'timer' : 'idle')
-  }, [listening, thinking, timers.length, alarms.length])
+    setAntennaStatus(speaking ? 'speaking' : listening ? 'listening' : thinking ? 'thinking' : (timers.length || alarms.length) ? 'timer' : 'idle')
+  }, [listening, thinking, speaking, timers.length, alarms.length])
   useEffect(() => {
     if (!timers.length && !alarms.length && displayMode === 'timer') setDisplayMode('normal')
   }, [timers.length, alarms.length, displayMode])
@@ -280,6 +281,7 @@ export default function App() {
   }, [draft])
 
   async function speak(text: string) {
+    setSpeaking(true)
     const bridge = localBridge.current
     if (bridge?.readyState === WebSocket.OPEN) bridge.send(JSON.stringify({ command: 'pause' }))
     try {
@@ -304,6 +306,7 @@ export default function App() {
         window.speechSynthesis.speak(utterance)
       })
     } finally {
+      setSpeaking(false)
       if (bridge?.readyState === WebSocket.OPEN) bridge.send(JSON.stringify({ command: 'resume' }))
     }
   }
