@@ -27,9 +27,11 @@ systemctl --user disable --now clive-listener
 
 ## Hardware notes
 
-- Connect the USB microphone or webcam microphone before starting the service.
-- A webcam is detected when Linux exposes a `/dev/video*` device.
-- The listener requests mono 16 kHz audio from the default ALSA/PulseAudio input.
+- Connect the USB webcam before starting the service. The listener now prefers a detected USB webcam/camera microphone automatically, then falls back to the operating system's default input.
+- The selected microphone name is shown in CLIVE's Local hardware status and in the listener service log.
+- To force a particular input, set `CLIVE_INPUT_DEVICE` to its numeric device index or a distinctive part of its name in the systemd service environment, then restart the service.
+- A webcam is detected when Linux exposes a `/dev/video*` device. The camera itself is not opened for video or visual recognition yet.
+- The listener requests mono 16 kHz audio from the selected ALSA/PulseAudio input.
 - The service is designed for a local device, not remote access.
 - Raspberry Pi Zero W uses ARMv6 and has only 512 MB RAM. Vosk may not have a compatible prebuilt Python package for ARMv6, and running the model alongside Chromium can be tight. The installer prints a warning on ARMv6. A Pi 3B or newer is the more realistic host for always-on local recognition.
 - If the microphone cannot open, check `arecord -l` and select a working default input in Raspberry Pi OS sound settings.
