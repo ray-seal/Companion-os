@@ -85,6 +85,14 @@ function localReply(question: string): string {
   if (q.includes('thank')) return "You're very welcome. See? Good manners. We're practically best mates."
   return "That's a good question. My proper answer-brain isn't connected yet, so I'm not going to make something up. For now I'm practising conversation and speech. Give me a little more time and we'll connect the clever bits."
 }
+type PersonaStyle = 'cheeky' | 'gentle' | 'curious' | 'grumpy'
+const idleQuips: Record<PersonaStyle, string[]> = {
+  cheeky: ["Still here, you know. Not that I'm counting. Much.", "I've had less attention than a houseplant. At least they get watered.", "Any chance of a conversation, or shall I stare dramatically?"],
+  gentle: ["Just keeping you company. No rush.", "I'm here whenever you fancy a chat.", "A peaceful little pause. Quite nice, really."],
+  curious: ["I wonder what we're going to figure out next.", "I've been thinking. Dangerous, I know.", "Got any interesting questions rattling around in there?"],
+  grumpy: ["If I had arms, I'd be folding them right now.", "Another thrilling episode of watching the room. Riveting.", "I don't suppose anyone's making me a tiny cup of tea?"]
+}
+
 export default function App() {
   const [mood, setMood] = useState<Mood>('happy')
   const [message, setMessage] = useState(lines.happy[0])
@@ -116,10 +124,12 @@ export default function App() {
   const sendMessageRef = useRef<(text: string) => void>(() => {})
   const [chat, setChat] = useState<ChatMessage[]>(readChat)
   const [personality, setPersonality] = useState<Personality>(starterPersonality)
+  const [personaStyle, setPersonaStyle] = useState<PersonaStyle>(() => { const saved = localStorage.getItem('clive-persona-style'); return saved === 'gentle' || saved === 'curious' || saved === 'grumpy' ? saved : 'cheeky' })
   const chatEnd = useRef<HTMLDivElement>(null)
   const draftInput = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => { localStorage.setItem('clive-profile', JSON.stringify(profile)) }, [profile])
+  useEffect(() => { localStorage.setItem('clive-persona-style', personaStyle) }, [personaStyle])
   useEffect(() => {
     let active = true
     let retryId: number | undefined
@@ -140,8 +150,8 @@ export default function App() {
           let data: any
           try { data = JSON.parse(event.data) } catch { return }
           if (data.type === 'status') {
-            const mic = data.microphone ? 'Mic ready' : 'No microphone detected'
-            const camera = data.webcam ? 'Webcam ready' : 'No webcam detected'
+            const mic = data.microphone ? 'Mic ready' + (data.microphone_name ? ' (' + data.microphone_name + ')' : '') : 'No microphone detected'
+            const camera = data.webcam ? 'Webcam detected' : 'No webcam detected'
             setLocalBridgeStatus('Local listener · ' + mic + ' · ' + camera)
           } else if (data.type === 'wake' || data.type === 'capture_started') {
             setChatOpen(true)
@@ -251,10 +261,16 @@ export default function App() {
   }, [])
   useEffect(() => {
     const timer = window.setInterval(() => {
-      if (Date.now() - lastInteraction > 60000 && mood !== 'sleepy') { setMood('sleepy'); setMessage(lines.sleepy[0]) }
-    }, 8000)
+      if (listening || thinking || Date.now() - lastInteraction < 45000) return
+      const idleFor = Date.now() - lastInteraction
+      const nextMood: Mood = idleFor > 180000 ? 'sleepy' : personaStyle === 'curious' ? 'curious' : personaStyle === 'gentle' ? 'calm' : personaStyle === 'grumpy' ? 'cheeky' : 'amused'
+      const quips = idleQuips[personaStyle]
+      setMood(nextMood)
+      setMessage(idleFor > 180000 ? lines.sleepy[Math.floor(Math.random() * lines.sleepy.length)] : quips[Math.floor(Math.random() * quips.length)])
+      setLastInteraction(Date.now())
+    }, 5000)
     return () => window.clearInterval(timer)
-  }, [lastInteraction, mood])
+  }, [lastInteraction, mood, personaStyle, listening, thinking])
   useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }) }, [chat])
   useEffect(() => {
     const input = draftInput.current
@@ -495,6 +511,8 @@ Forecast time: ${data.current.time} (${data.timezone}).`
             <article><Sparkles /><strong>{mood}</strong><small>Current mood</small></article>
             <article><Smile /><strong>{personality.traits?.curiosity ? 'Curious' : 'Getting acquainted'}</strong><small>Character</small></article>
           </div>
+          <h3>Personality</h3>
+          <div className="personality-picker"><label htmlFor="clive-persona">How should I behave?</label><select id="clive-persona" value={personaStyle} onChange={e => { setPersonaStyle(e.target.value as PersonaStyle); react('curious', 'Personality updated. I shall endeavour to be appropriately insufferable.') }}><option value="cheeky">Cheeky northern bloke</option><option value="gentle">Gentle & reassuring</option><option value="curious">Curious little inventor</option><option value="grumpy">Lovably grumpy</option></select><small>Stored on this device. Idle comments and expressions change with his temperament.</small></div>
           <h3>CLIVE's voice</h3>
           <CliveVoiceSetup mode="status" />
           <h3>Local hardware</h3>
