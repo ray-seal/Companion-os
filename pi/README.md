@@ -1,6 +1,6 @@
 # CLIVE local voice listener
 
-This optional local service listens for **"Hey Clive"**, **"Hi Clive"** and **"Here Clive"**. Wake-word detection and speech recognition happen on the Pi using Vosk. Audio is not streamed to a cloud speech-recognition service.
+This optional local service listens for the name **"Clive"** on its own, including in casual phrases such as "Oi Clive". No fixed "Hey Clive" prefix is required. Wake-word detection and speech recognition happen on the Pi using Vosk. Audio is not streamed to a cloud speech-recognition service.
 
 The service binds only to `127.0.0.1:8765`. The CLIVE web app connects to it locally. After a wake phrase, CLIVE says **"I'm listening"**, pauses the listener while he speaks, then captures the request. A completed transcript is passed to the existing `/api/chat` flow.
 
